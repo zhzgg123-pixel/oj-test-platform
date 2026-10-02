@@ -709,14 +709,14 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             用户名
           </label>
-          <input id="f_username" value="" placeholder="留空则不登录" />
+          <input id="f_username" value="" placeholder="认证用例需要登录凭据" />
         </div>
         <div class="form-group">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             密码
           </label>
-          <input id="f_password" type="password" value="" placeholder="留空则不登录" />
+          <input id="f_password" type="password" value="" placeholder="认证用例需要登录凭据" />
         </div>
         <div class="form-group">
           <label>
@@ -730,7 +730,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             用例数
           </label>
-          <input id="f_caseCount" type="number" value="5" min="1" max="50" />
+          <input id="f_caseCount" type="number" value="5" min="1" max="1000" required />
         </div>
         <div class="form-group">
           <label>
@@ -749,6 +749,24 @@
             <option value="boundary" selected>Boundary</option>
             <option value="rule" selected>Rule</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label for="f_profile">题目配置</label>
+          <select id="f_profile" required disabled><option value="">加载中</option></select>
+          <small id="profileStatus" role="status"></small>
+          <button type="button" class="btn" onclick="loadProfiles()">重新加载题目配置</button>
+        </div>
+        <div class="form-group">
+          <label for="f_seed">随机种子</label>
+          <input id="f_seed" type="number" value="42" step="1" required />
+        </div>
+        <div class="form-group">
+          <label for="f_mode">执行模式</label>
+          <select id="f_mode"><option value="sequential">顺序执行</option><option value="concurrent">线程池并发</option></select>
+        </div>
+        <div class="form-group">
+          <label for="f_workers">并发线程数</label>
+          <input id="f_workers" type="number" value="1" min="1" max="16" step="1" required disabled />
         </div>
         <div class="form-group full" style="margin-top:4px">
           <button type="submit" class="btn btn-primary" id="submitBtn">
@@ -803,14 +821,14 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             用户名（可选）
           </label>
-          <input id="t_username" value="" placeholder="留空则不登录" />
+          <input id="t_username" value="" placeholder="认证用例需要登录凭据" />
         </div>
         <div class="form-group">
           <label>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             密码（可选）
           </label>
-          <input id="t_password" type="password" value="" placeholder="留空则不登录" />
+          <input id="t_password" type="password" value="" placeholder="认证用例需要登录凭据" />
         </div>
         <div class="form-group full" style="margin-top:4px">
           <button class="btn btn-primary" onclick="testConnection()">
@@ -887,8 +905,15 @@ function flash(msg, type = 'success') {
   const icon = type === 'success' ? ICONS.check : ICONS.alert;
   const el = document.createElement('div');
   el.className = 'flash ' + type;
-  el.innerHTML = icon + '<span>' + msg + '</span>';
-  el.innerHTML += '<button class="flash-close" onclick="this.parentElement.remove()">' + ICONS.x + '</button>';
+  el.innerHTML = icon;
+  const text = document.createElement('span');
+  text.textContent = msg;
+  const close = document.createElement('button');
+  close.className = 'flash-close';
+  close.textContent = '×';
+  close.setAttribute('aria-label', '关闭提示');
+  close.addEventListener('click', () => el.remove());
+  el.append(text, close);
   container.appendChild(el);
   setTimeout(() => {
     el.style.animation = 'flashOut 250ms ease-in forwards';
@@ -1038,39 +1063,87 @@ async function deleteTask(id) {
 }
 
 // ========== Create Task ==========
-document.getElementById('createForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> 创建中...';
-  const sel = document.getElementById('f_strategies');
-  const strategies = Array.from(sel.selectedOptions).map(o => o.value);
+let creatingTask = false;
+let profilesReady = false;
+function updateSubmitState() {
+  document.getElementById('submitBtn').disabled = creatingTask || !profilesReady;
+}
+async function apiJson(path, options) {
+  const response = await fetch(API + path, options);
+  let body;
+  try { body = await response.json(); }
+  catch { throw new Error(`HTTP ${response.status}: 返回内容不是 JSON`); }
+  if (!response.ok) {
+    const detail = body.detail || body.message || '请求失败';
+    throw new Error(`HTTP ${response.status}: ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`);
+  }
+  return body;
+}
+async function loadProfiles() {
+  profilesReady = false;
+  updateSubmitState();
+  const select = document.getElementById('f_profile');
+  const previous = select.value;
+  select.disabled = true;
+  document.getElementById('profileStatus').textContent = '加载中…';
   try {
-    const r = await fetch(API + '/api/tasks', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        name: document.getElementById('f_name').value,
-        base_url: document.getElementById('f_baseUrl').value,
-        username: document.getElementById('f_username').value,
-        password: document.getElementById('f_password').value,
-        problem_id: document.getElementById('f_problemId').value,
-        case_count: parseInt(document.getElementById('f_caseCount').value) || 5,
-        adapter_name: document.getElementById('f_adapter').value,
-        strategies: strategies,
-      }),
-    });
-    const d = await r.json();
-    if (d.task_id) {
-      flash('任务已创建并开始执行！');
-      document.querySelector('[data-tab="tasks"]').click();
-    } else {
-      flash('创建失败: ' + JSON.stringify(d), 'error');
+    const data = await apiJson('/api/v1/profiles');
+    if (!data.profiles.length) throw new Error('没有可用的题目配置');
+    select.replaceChildren();
+    for (const profile of data.profiles) {
+      const option = document.createElement('option');
+      option.value = profile.id;
+      option.textContent = `${profile.title} (${profile.id})`;
+      select.append(option);
     }
-  } catch (e) { flash('创建失败: ' + e.message, 'error'); }
+    if ([...select.options].some(option => option.value === previous)) select.value = previous;
+    select.disabled = false;
+    profilesReady = true;
+    document.getElementById('profileStatus').textContent = '题目配置决定程序模板；题目 ID 必须对应目标 OJ 的题目。';
+  } catch (error) {
+    document.getElementById('profileStatus').textContent = error.message;
+  } finally { updateSubmitState(); }
+}
+document.getElementById('f_mode').addEventListener('change', () => {
+  const sequential = document.getElementById('f_mode').value === 'sequential';
+  const workers = document.getElementById('f_workers');
+  workers.disabled = sequential;
+  workers.value = sequential ? '1' : '3';
+});
+document.getElementById('createForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (creatingTask || !profilesReady) return;
+  const value = id => document.getElementById(id).value;
+  const strategies = [...document.getElementById('f_strategies').selectedOptions].map(option => option.value);
+  const caseCount = Number(value('f_caseCount'));
+  const seed = Number(value('f_seed'));
+  if (!strategies.length || !Number.isSafeInteger(caseCount) || caseCount < strategies.length || caseCount > 1000) {
+    flash('请选择策略，用例数必须为整数、覆盖全部策略且不超过 1000。', 'error'); return;
+  }
+  if (!Number.isSafeInteger(seed)) { flash('随机种子必须为安全整数。', 'error'); return; }
+  creatingTask = true;
+  updateSubmitState();
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = '创建中…';
+  try {
+    const mode = value('f_mode');
+    const task = await apiJson('/api/v1/tasks', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name: value('f_name'), base_url: value('f_baseUrl'),
+        username: value('f_username'), password: value('f_password'),
+        problem_id: value('f_problemId'), profile_id: value('f_profile'), seed,
+        mode, max_workers: mode === 'sequential' ? 1 : Number(value('f_workers')),
+        case_count: caseCount, adapter_name: value('f_adapter'), strategies})
+    });
+    if (!task.task_id) throw new Error('响应缺少任务 ID');
+    document.getElementById('f_password').value = '';
+    flash('任务已创建：' + task.task_id);
+    document.querySelector('[data-tab="tasks"]').click();
+  } catch (error) { flash('创建失败: ' + error.message, 'error'); }
   finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> 创建并运行';
+    creatingTask = false;
+    btn.textContent = '创建并运行';
+    updateSubmitState();
   }
 });
 
@@ -1168,6 +1241,7 @@ document.head.appendChild(spinStyle);
 
 // ========== Init ==========
 checkHealth();
+loadProfiles();
 refreshPlugins();
 refreshConfig();
 startPolling();

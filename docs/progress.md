@@ -12,7 +12,7 @@
 | S05 SQLite | PASS (Windows/Mock) | 四表、输入快照、结果幂等、运行锁、重启恢复、队列20、Web／CLI共用服务、历史／源码／报告API、旧入口兼容、schema v1→v2保留历史；214 测试通过（1 条上游弃用提示）。独立审查发现的时间字符串／报告大小兼容问题已修复并复测。POSIX 锁待 S09／S11 |
 | S06 并发与取消 | PASS (Windows/Mock) | S06a 有界future、逐用例独立会话和公开入口；S06b取消屏障、在途结果保留、取消元数据、报告终态一致性、关闭期限及CLI KeyboardInterrupt退出130；235测试通过（1条上游弃用提示）。不证明远端进程终止或真实控制台信号 |
 | S07 报告 | PASS (Windows/Mock) | S07a 报告输入、结构化差异、任务/profile/版本上下文、HTML转义、UUID防覆盖；S07b双格式暂存发布及元数据事务、失败清理；S07c共享脱敏、配置白名单、源码脱敏标记、规范哈希/判题保留及错误统计脱敏；S07d单事务完整快照、Artifact接口及下载验收；254测试通过。独立复审发现的泄漏/证据破坏边界均已修复。强制终止的孤立文件风险明确保留；无断电原子性声明 |
-| S08 Web | NOT_RUN | |
+| S08 Web | IN_PROGRESS | S08a 创建表单接通profile/seed/mode/workers、202 Location、配置失败重试及安全提示；实际浏览器创建顺序/并发并核对持久化，256测试通过。列表/详情/取消完整流程待S08b |
 | S09 Docker | NOT_RUN | |
 | S10 真实联调 | NOT_RUN | |
 | S11 GitHub Actions | NOT_RUN | 真实运行需要 GitHub 仓库地址 |

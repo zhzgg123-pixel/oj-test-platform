@@ -360,6 +360,34 @@
       "review": "Independent review found stored_case_id redaction regression; deterministic short-secret snapshot test reproduced it, canonical restoration fixed it. Narrow rereview found no blockers.",
       "artifacts": [
         "artifacts/s07d-snapshots.xml"
+      ],
+      "commit": "766f5928a6a50b23687700a07c0b825dfb4a684b",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S08a",
+      "commit_locator": "feat: expose profile and execution controls in web form",
+      "environment": "Windows Python 3.12.10; local Chromium via playwright-cli",
+      "red": "Two new public create tests failed for absent Location response header. Existing form omitted profile/seed/mode/workers.",
+      "command": "python -m pytest -q --junitxml=artifacts/s08a-web-controls.xml",
+      "exit_code": 0,
+      "passed": 256,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation",
+        "Browser observed Google font certificate error and favicon404; operation checks passed"
+      ],
+      "scope": "v1 form configuration and public202 Location. Actual browser submitted concurrent and sequential max_of_two tasks; API/SQLite confirmed config and COMPLETED. Profile503 injection blocked submission, retry recovered, malicious error string rendered as text, empty strategies rejected. Full task/detail/cancel UI remains S08b.",
+      "review": "Independent read-only scoped form review found no blockers; reviewer did not rerun browser checks.",
+      "artifacts": [
+        "artifacts/s08a-web-controls.xml",
+        "artifacts/s08a-browser/concurrent-form.png",
+        "docs/manual-web-checks.md"
+      ],
+      "task_ids": [
+        "e562c45b-40f6-45f6-a4b0-2c0790966f84",
+        "e2602f6d-5d26-4be3-8748-8e5fa47e1f40"
       ]
     }
   ]

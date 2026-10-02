@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 254 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**Docker、真实 OJ 联调和 CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 256 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**Docker、真实 OJ 联调和 CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -85,3 +85,7 @@ Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源�
 ## 报告证据（Windows／HTTP Mock 已验收）
 
 报告 schema_version=2 已保留逐例实际源码、题号、seed、源码/profile 哈希、结构化预期与实际观察、错误和尝试次数。任务报告包含 SQLite 保存的题目快照与平台/被测版本；sut_sha 未知时保留 null，不假造版本。HTML 对动态用例及配置文本转义，报告 ID 使用 UUID 防止同秒覆盖。无结构化预期的旧错误用例保留原始 expected 和诊断，不因报告阶段重新校验而丢失报告。双格式先完成渲染，暂存文件 flush/fsync 后逐个原子替换，报告元数据成对事务提交；普通写入/登记失败回滚并清理本次文件。文件系统与 SQLite 不是同一事务，强制终止可能留下未登记孤立文件，不宣称断电原子性。LocalOJ 和报告共用敏感字段与已知秘密替换函数；报告配置采用字段白名单，先从原始响应识别凭据再过滤响应字段。源码被脱敏时标记 source_redacted，保留原始源码哈希；规范哈希、报告标识及判题枚举不会因短密码巧合而改变。错误分布从脱敏结果重建。TaskRepository.report_snapshot 在同一读事务中获取任务、题目、输入和结果；ReportGenerator.generate(snapshot) 返回 ReportArtifact 列表，ID 与数据库报告记录一致。旧 TaskResult 调用保留字典返回。报告包含数据库用例 ID 和 ordinal；未完成快照拒绝生成。HTML/JSON 的 v1 下载与两个旧别名均验证内容、Content-Type、篡改422、缺失404和越界422。
+
+## Web 创建表单（S08 进行中）
+
+页面已接入 v1 任务创建，支持题目配置、实际题号、策略、精确数量、seed、顺序/并发与1–16线程。顺序固定1线程；题目配置加载失败时禁止提交并支持重试。创建成功清空密码，失败显示HTTP错误，提示使用文本节点。实际浏览器验证见 docs/manual-web-checks.md；任务列表/详情与取消的完整页面改造仍待 S08b。

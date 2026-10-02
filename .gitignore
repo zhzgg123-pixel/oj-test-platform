@@ -17,4 +17,5 @@ logs/
 *.log
 .cache/
 .worktrees/
+.playwright-cli/
 tp_b64_*

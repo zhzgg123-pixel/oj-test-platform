@@ -3,7 +3,7 @@ from copy import deepcopy
 from dataclasses import asdict
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi import APIRouter, HTTPException, Request, Query, Response
 from fastapi.responses import FileResponse
 from task_center.service import QueueFullError, TaskConflictError
 from pydantic import Field, SecretStr, ValidationError, create_model
@@ -81,11 +81,12 @@ def service_call(operation):
 
 
 @router.post('', status_code=202)
-def create_task(req: CreateTaskRequest, request: Request):
+def create_task(req: CreateTaskRequest, request: Request, response: Response):
     config = validated_config(req, request)
     credentials = ExecutionCredentials(username=req.username, password=req.password)
     service = request.app.state.task_service
     task_id = service_call(lambda: service.create(config, credentials, name=req.name))
+    response.headers['Location'] = f'/api/v1/tasks/{task_id}'
     return {'task_id': task_id, 'status': service.get(task_id).state}
 
 
