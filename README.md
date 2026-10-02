@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前为经过脱敏的原始源码基线，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。**SQLite、YAML 题目配置、完整并发入口、平台回归、Docker、CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。**判定缺陷修复、SQLite、YAML 题目配置、完整并发入口、Docker、CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -14,10 +14,13 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-本基线没有平台自动化测试，不能以编译检查替代业务测试。后续 S01 引入 pytest 和独立 HTTP Mock。
+测试默认使用随机本地端口，不访问真实 OJ。JUnit 可通过 `--junitxml=artifacts/tests.xml` 导出。手动启动 Mock：`python -m tests.mock_oj.server --port 8099`；固定测试账户 `tester / test-only` 仅用于该 Mock。Mock 不编译或执行 C++，其测试结果不证明真实判题正确。
+
+E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺文件或未选中任何 E2E 测试时非零退出。真实 E2E 测试将在 S10 添加。
 
 ## 开发约定
 

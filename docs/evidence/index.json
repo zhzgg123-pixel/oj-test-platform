@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "stages": [
+    {
+      "stage": "S00",
+      "commit": "4afe3ddf8f39329bcf2070014524cbbba59058b9",
+      "remote_ref": "origin/main",
+      "remote_sha_verified": true,
+      "environment": "Windows, Python 3.12.10",
+      "checks": ["source hashes unchanged", "compileall exit 0", "pip check exit 0"],
+      "business_regression": "NOT_RUN at baseline"
+    },
+    {
+      "stage": "S01",
+      "commit_locator": "test: add isolated mock OJ harness",
+      "environment": "Windows, Python 3.12.10; fresh venv installed from requirements-dev.lock",
+      "red": "Mock helpers missing; subsequently E2E gate falsely exited 0 with no real tests selected",
+      "command": "python -m pytest -q --junitxml=artifacts/s01-clean-environment.xml",
+      "exit_code": 0,
+      "passed": 15,
+      "failed": 0,
+      "evidence_scope": "Local HTTP contract harness and existing Adapter; not real C++ execution",
+      "artifacts": ["artifacts/s01.xml", "artifacts/s01-clean-environment.xml"]
+    }
+  ]
+}

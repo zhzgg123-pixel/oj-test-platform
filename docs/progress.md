@@ -4,8 +4,8 @@
 
 | 阶段 | 状态 | 证据 |
 |---|---|---|
-| S00 基线 | LOCAL_PASS | 44 文件导入、4 文件脱敏；来源哈希未变化；Python 3.12.10 compileall 和 pip check 通过。推送后由远端 SHA 读回确认同步 |
-| S01 测试底座 | NOT_RUN | |
+| S00 基线 | PASS | `4afe3ddf8f39329bcf2070014524cbbba59058b9` 已推送 origin/main 并核对远端；来源哈希、compileall、pip check 通过 |
+| S01 测试底座 | LOCAL_PASS | 15 条测试通过；HTTP Mock、5类结果读取、故障注入、Cookie、并发屏障、清理、E2E 门禁；干净环境锁文件安装与测试通过 |
 | S02 判定与协议 | NOT_RUN | |
 | S03 配置与入口 | NOT_RUN | |
 | S04 YAML 题目 | NOT_RUN | |
