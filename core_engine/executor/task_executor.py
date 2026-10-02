@@ -1,13 +1,15 @@
 """Shared task execution entrypoint with validation before network I/O."""
 from config_center.models import TaskConfig, ExecutionCredentials
+from config_center.profile_loader import ProfileLoader
 from core_engine.case_engine.case_builder import CaseBuilder
 from core_engine.executor.sequential_executor import SequentialExecutor
 from plugins.plugin_manager import PluginManager
 
 
 class TaskExecutor:
-    def __init__(self):
+    def __init__(self, profile_loader=None):
         self._case_builder = CaseBuilder()
+        self._profile_loader = profile_loader or ProfileLoader()
         self._plugin_manager = PluginManager()
 
     def run_task(self, task_id, config, credentials=None):
@@ -26,8 +28,8 @@ class TaskExecutor:
         adapter_type = self._plugin_manager.get_adapter(config.adapter_name)
         if adapter_type is None:
             raise ValueError('unknown adapter')
-        cases = self._case_builder.build({'problem_id': config.problem_id,
-            'strategies': config.strategies, 'count': config.case_count, 'seed': config.seed})
+        profile = self._profile_loader.load(config.profile_id)
+        cases = self._case_builder.build(config, profile)
         if not cases:
             raise ValueError('no executable cases generated')
         # An executing task owns its connection pool; never close another task's client.

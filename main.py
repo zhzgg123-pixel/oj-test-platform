@@ -40,6 +40,7 @@ def parser():
 
 def run_ci(args):
     from config_center.config import AppConfig
+    from config_center.profile_loader import ProfileLoader
     from config_center.models import TaskConfig, ExecutionCredentials
     from core_engine.executor.task_executor import TaskExecutor
     from core_engine.report_engine.report_generator import ReportGenerator
@@ -50,6 +51,7 @@ def run_ci(args):
         overrides = {key: getattr(args, key, None) for key in TaskConfig.model_fields}
         app_config = AppConfig.load(config_path=args.config, task_overrides=overrides)
         config = app_config.task_config()
+        ProfileLoader().load(config.profile_id)
         if config.mode != 'sequential':
             raise ValueError('concurrent mode is not enabled until S06')
         credentials = ExecutionCredentials(username=args.username or os.getenv('OJ_USERNAME', ''),

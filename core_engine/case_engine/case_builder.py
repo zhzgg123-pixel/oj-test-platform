@@ -1,66 +1,57 @@
-"""
-用例构建器 - CaseBuilder
+"""Distribute a task's total case count across selected profile strategies."""
+import random
 
-组合多策略生成测试用例，负责任务：
-1. 根据配置选择生成策略
-2. 调用对应生成器生成用例
-3. 合并、排序（P0→P1→P2）
-4. 输出最终用例列表
-"""
-
-from typing import Optional
-from .base_generator import BaseGenerator, TestCase
+from config_center.models import TaskConfig
+from config_center.profile_loader import ProfileLoader
 from .random_generator import RandomGenerator
 from .boundary_generator import BoundaryGenerator
 from .rule_generator import RuleGenerator
 
 
 class CaseBuilder:
-    """用例构建器 - 组合多策略"""
-
     def __init__(self):
-        self._generators: dict[str, BaseGenerator] = {
-            "random": RandomGenerator(),
-            "boundary": BoundaryGenerator(),
-            "rule": RuleGenerator(),
-        }
+        self._generators = {'random': RandomGenerator(), 'boundary': BoundaryGenerator(), 'rule': RuleGenerator()}
 
-    def build(self, spec: dict) -> list[TestCase]:
-        """
-        构建测试用例集
+    def build(self, config, profile=None):
+        if isinstance(config, dict):
+            spec = dict(config)
+            strategies = spec.get('strategies', ['random', 'boundary', 'rule'])
+            count = spec.get('count', spec.get('case_count', 5))
+            if not isinstance(strategies, list) or not strategies:
+                raise ValueError('at least one strategy is required')
+            if type(count) is not int or not 1 <= count <= 1000:
+                raise ValueError('count must be an integer between 1 and 1000')
+            if any(name not in self._generators for name in strategies):
+                raise ValueError('unknown strategy')
+            # Keep the explicit extension API for callers of registered custom generators.
+            if any(name not in {'random', 'boundary', 'rule'} for name in strategies):
+                cases = []
+                for name in strategies:
+                    generated = self._generators[name].generate(spec)
+                    if not generated:
+                        raise ValueError('strategy generated no cases')
+                    cases.extend(generated)
+                return cases
+            spec.pop('count', None)
+            spec['case_count'] = count
+            config = TaskConfig.model_validate(spec)
+        profile = profile or ProfileLoader().load(config.profile_id)
+        if profile.id != config.profile_id:
+            raise ValueError('task profile_id does not match loaded profile')
+        rng = random.Random(config.seed)
+        groups = {}
+        for offset, name in enumerate(config.strategies):
+            count = config.case_count // len(config.strategies) + (offset < config.case_count % len(config.strategies))
+            groups[name] = self._generators[name].generate(
+                {'config': config, 'profile': profile, 'count': count, 'rng': rng})
+        # Round-robin order also makes partial/cancelled executions cover strategies early.
+        cases = []
+        for ordinal in range(config.case_count):
+            strategy = config.strategies[ordinal % len(config.strategies)]
+            case = groups[strategy][ordinal // len(config.strategies)]
+            case.metadata['ordinal'] = ordinal
+            cases.append(case)
+        return cases
 
-        Args:
-            spec: 构建规格
-                - strategies: 使用的策略列表
-                - problem_id: 题目 ID
-                - count: 随机生成数量
-                - filters: 规则筛选条件
-
-        Returns:
-            排序后的测试用例列表
-        """
-        strategies = spec.get("strategies", ["random", "boundary", "rule"])
-        if not isinstance(strategies, list) or not strategies:
-            raise ValueError("at least one strategy is required")
-        count = spec.get("count", 5)
-        if type(count) is not int or not 1 <= count <= 1000:
-            raise ValueError("count must be an integer between 1 and 1000")
-        for name in strategies:
-            if name not in self._generators:
-                raise ValueError(f"unknown strategy: {name}")
-        all_cases: list[TestCase] = []
-        for strategy_name in strategies:
-            cases = self._generators[strategy_name].generate(spec)
-            if not cases:
-                raise ValueError(f"strategy generated no cases: {strategy_name}")
-            all_cases.extend(cases)
-
-        # P0 → P1 → P2
-        priority_order = {"P0": 0, "P1": 1, "P2": 2}
-        all_cases.sort(key=lambda c: priority_order.get(c.priority, 99))
-
-        return all_cases
-
-    def register_generator(self, name: str, generator: BaseGenerator) -> None:
-        """注册自定义生成器（扩展点）"""
+    def register_generator(self, name, generator):
         self._generators[name] = generator

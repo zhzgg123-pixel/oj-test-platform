@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.routing import Mount
 
 from config_center.config import AppConfig
+from config_center.profile_loader import ProfileLoader
 from plugins.plugin_manager import PluginManager
 from task_center.task_manager import TaskManager
 from backend.routers import task_router, config_router, report_router, plugin_router
@@ -48,6 +49,16 @@ def create_app(config_path=None):
     app.include_router(plugin_router.router, prefix='/api/plugins', tags=['plugins'])
     frontend = Path(__file__).resolve().parents[1] / 'frontend'
     app.mount('/frontend', StaticFiles(directory=frontend, html=True), name='frontend')
+
+    @app.get('/api/v1/profiles')
+    async def profiles():
+        loader = ProfileLoader()
+        result = []
+        for file in sorted(loader.root.glob('*.yaml')):
+            profile = loader.load(file.stem)
+            result.append({'id': profile.id, 'title': profile.definition.title,
+                           'profile_sha256': profile.profile_sha256})
+        return {'profiles': result}
 
     @app.get('/api/health')
     async def health(request: Request):

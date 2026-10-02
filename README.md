@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；目前 144 条本地回归通过。**SQLite、YAML 题目配置、完整并发入口、Docker、CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 171 条本地回归通过（1 条上游弃用提示）。**SQLite、完整并发入口、Docker、CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -47,3 +47,11 @@ CLI 密码通过 `OJ_PASSWORD` 传入，用户名通过 `OJ_USERNAME` 或 `--use
 CLI 退出码：0 表示至少执行一条且全部通过、报告生成成功；1 表示运行或用例失败；2 表示参数／配置错误；130 表示 Ctrl+C。`--output` 和报告只保存非秘密任务配置。
 
 API 的任务创建成功返回 202，非法配置返回 422。配置重载使用启动时同一个文件；重载失败保留原配置，报告目录变更需重启。导入 `main` 或 `backend.app` 不创建运行目录。
+
+## YAML 题目与可复现生成
+
+内置 `a_plus_b` 和 `max_of_two`，使用 `--profile max_of_two --problem-id 2` 选择本地配置及远端题号。远端题号需要对应相同题意，真实 OJ 联调仍待 S10 验证。
+
+`--case-count` 是任务总用例数，按所选 random／boundary／rule 策略均分并交错执行；相同配置与 seed 生成相同提交源码。随机策略抽样程序模板，边界策略覆盖 CE／TLE／RE 模板，规则策略覆盖匿名、缺失题目和空源码。具体语义见 [profiles](profiles/README.md)。匿名用例使用独立无登录会话。
+
+`GET /api/v1/profiles` 列出可用题目；生成接口返回实际源码、源码哈希、profile 哈希和 seed。快照的持久化与完整报告分别在 S05／S07 接入。

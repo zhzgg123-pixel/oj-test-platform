@@ -133,6 +133,26 @@
       "scope": "YAML/schema/path validation, two distinct problem template sets, source hashes and snapshots; execution wiring follows in S04b",
       "artifacts": [
         "artifacts/s04a-profiles.xml"
+      ],
+      "commit": "5f725e71c264a97eda07e77898d4aac107978a86",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S04b",
+      "commit_locator": "feat: execute profile-driven reproducible test cases",
+      "environment": "Windows Python 3.12.10",
+      "red": "9 failures: profile builder signature, inflated case count, missing profile validation and listing",
+      "command": "python -m pytest -q --junitxml=artifacts/s04b-generation.xml",
+      "exit_code": 0,
+      "passed": 171,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "Two profiles via HTTP Mock and subprocess CLI; exact total count, seed reproducibility, source hashes, anonymous session isolation; real C++ OJ NOT_RUN",
+      "artifacts": [
+        "artifacts/s04b-generation.xml"
       ]
     }
   ]

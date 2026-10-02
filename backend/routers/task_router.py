@@ -6,6 +6,7 @@ from pydantic import Field, SecretStr, ValidationError, create_model
 
 from config_center.models import TaskConfig, ExecutionCredentials, ValidatedModel
 from core_engine.case_engine.case_builder import CaseBuilder
+from config_center.profile_loader import ProfileLoader
 
 router = APIRouter()
 
@@ -42,6 +43,10 @@ def validated_config(req, request):
         raise HTTPException(422, detail='concurrent mode is not enabled until S06')
     if request.app.state.plugin_manager.get_adapter(config.adapter_name) is None:
         raise HTTPException(422, detail='unknown adapter')
+    try:
+        ProfileLoader().load(config.profile_id)
+    except ValueError:
+        raise HTTPException(422, detail='invalid or missing problem profile') from None
     return config
 
 
@@ -49,14 +54,15 @@ def validated_config(req, request):
 async def generate_cases(req: GenerateCasesRequest, request: Request):
     config = validated_config(req, request)
     try:
-        cases = CaseBuilder().build({'problem_id': config.problem_id,
-            'strategies': config.strategies, 'count': config.case_count, 'seed': config.seed})
+        cases = CaseBuilder().build(config, ProfileLoader().load(config.profile_id))
         if not cases:
             raise ValueError('no executable cases generated')
     except ValueError as exc:
         raise HTTPException(422, detail=str(exc)) from None
     return {'total': len(cases), 'cases': [
-        {'id': c.id, 'desc': c.desc, 'expected_status': c.expected_status, 'tags': c.tags} for c in cases]}
+        {'id': c.id, 'desc': c.desc, 'expected_status': c.expected_status, 'tags': c.tags,
+         'profile_id': c.profile_id, 'profile_sha256': c.profile_sha256, 'seed': c.seed,
+         'source_code': c.source_code, 'source_sha256': c.source_sha256} for c in cases]}
 
 
 @router.post('', status_code=202)
