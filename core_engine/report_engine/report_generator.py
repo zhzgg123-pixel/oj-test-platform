@@ -1,8 +1,9 @@
 """
 报告生成器 - ReportGenerator
 
-文档规范：
-- generate(task_result, task_config) -> dict (含 report_id, json_path, html_path, summary)
+接口：
+- generate(ReportSnapshot) -> list[ReportArtifact]
+- generate(task_result, task_config) -> dict（兼容旧调用）
 - 数据含 status_distribution 和 failed_cases
 - JSON + HTML 双格式
 """
@@ -11,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import logging
+import hashlib
 from dataclasses import asdict
 from html import escape
 from uuid import uuid4
@@ -20,6 +22,7 @@ from typing import Optional
 
 from core_engine.executor.base_executor import TaskResult
 from core_engine.redaction import redact, credential_values, safe_evidence
+from core_engine.report_engine.snapshot import ReportSnapshot, ReportArtifact
 
 logger = logging.getLogger("oj.report")
 
@@ -33,11 +36,11 @@ class ReportGenerator:
 
     def generate(
         self,
-        task_result: TaskResult,
+        task_result: TaskResult | ReportSnapshot,
         task_config: Optional[dict] = None,
         *, task_context: Optional[dict] = None,
         secrets=(),
-    ) -> dict:
+    ) -> dict | list[ReportArtifact]:
         """
         生成测试报告（JSON + HTML）
 
@@ -46,11 +49,23 @@ class ReportGenerator:
             task_config: 任务配置（可选）
 
         Returns:
-            dict: {"report_id", "json_path", "html_path", "summary"}
+            快照调用返回 ReportArtifact 列表；旧调用返回路径和统计字典。
         """
         report_id = f"report_{uuid4()}"
 
+        snapshot = task_result if isinstance(task_result, ReportSnapshot) else None
+        if snapshot is not None:
+            if any(case.result is None for case in snapshot.cases):
+                raise ValueError('report snapshot contains unfinished cases')
+            task_config = snapshot.task.config
+            task_context = snapshot.context()
+            task_result = snapshot.to_result()
+
         data = self._build_data(report_id, task_result, task_config)
+        if snapshot is not None:
+            for entry, stored in zip(data['all_cases'], snapshot.cases, strict=True):
+                entry['stored_case_id'] = stored.id
+                entry['ordinal'] = stored.ordinal
         data['task'] = task_context or {}
         evidence_secrets = [secret for result in task_result.case_results if result.observation
                             for secret in credential_values(result.observation.evidence)]
@@ -64,6 +79,8 @@ class ReportGenerator:
             if key in data['task']:
                 clean['task'][key] = data['task'][key]
         for raw, sanitized in zip(data['all_cases'], clean['all_cases']):
+            if 'stored_case_id' in raw:
+                sanitized['stored_case_id'] = raw['stored_case_id']
             sanitized['status'] = raw['status']
             for key in ('source_sha256', 'profile_sha256'):
                 sanitized['input'][key] = raw['input'][key]
@@ -103,6 +120,7 @@ class ReportGenerator:
             for source, target in zip(staged, paths):
                 os.replace(source, target)
                 published.append(target)
+            digests = [hashlib.sha256(path.read_bytes()).hexdigest() for path in paths]
         except BaseException:
             for path in [*staged, *published]:
                 try:
@@ -112,6 +130,10 @@ class ReportGenerator:
             raise
 
         logger.info("[Report] 报告已生成: %s, %s", json_path, html_path)
+
+        if snapshot is not None:
+            return [ReportArtifact(str(uuid4()), format, path.name, digest)
+                    for format, path, digest in zip(('json', 'html'), paths, digests)]
 
         return {
             "report_id": report_id,

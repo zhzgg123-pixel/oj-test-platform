@@ -6,7 +6,7 @@ import math
 from pathlib import Path, PurePosixPath
 import re
 import time
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from config_center.models import TaskConfig
 from core_engine.case_engine.base_generator import TestCase
@@ -139,18 +139,27 @@ class TaskRepository:
     def list_cases(self, task_id):
         with self.database.connection() as db:
             self._required(db, task_id)
-            cases = []
-            for row in db.execute('SELECT * FROM task_cases WHERE task_id=? ORDER BY ordinal', (task_id,)):
-                result = db.execute('SELECT * FROM case_results WHERE case_id=?', (row['id'],)).fetchone()
-                value = dict(result) if result else None
-                if value:
-                    actual = value.pop('actual_json')
-                    value['actual'] = json.loads(actual) if actual else None
-                case = StoredCase(row['id'], task_id, row['ordinal'], row['strategy'], json.loads(row['input_json']),
-                                  json.loads(row['expectation_json']), row['source_sha256'], row['state'], value)
-                case.to_case()  # Verify integrity before exposing or replaying persisted input.
-                cases.append(case)
-            return cases
+            return self._list_cases(db, task_id)
+
+    def report_snapshot(self, task_id):
+        from core_engine.report_engine.snapshot import ReportSnapshot
+        with self.database.connection() as db:
+            task = self._record(db, self._required(db, task_id))
+            return ReportSnapshot(task, tuple(self._list_cases(db, task_id)))
+
+    def _list_cases(self, db, task_id):
+        cases = []
+        for row in db.execute('SELECT * FROM task_cases WHERE task_id=? ORDER BY ordinal', (task_id,)):
+            result = db.execute('SELECT * FROM case_results WHERE case_id=?', (row['id'],)).fetchone()
+            value = dict(result) if result else None
+            if value:
+                actual = value.pop('actual_json')
+                value['actual'] = json.loads(actual) if actual else None
+            case = StoredCase(row['id'], task_id, row['ordinal'], row['strategy'], json.loads(row['input_json']),
+                              json.loads(row['expectation_json']), row['source_sha256'], row['state'], value)
+            case.to_case()  # Verify integrity before exposing or replaying persisted input.
+            cases.append(case)
+        return cases
 
     def save_case_result(self, task_id, result):
         if result.status not in {'PASSED', 'FAILED', 'ERROR', 'CANCELLED'}:
@@ -238,7 +247,7 @@ class TaskRepository:
         with self.database.connection(write=True) as db:
             return [self._save_report(db, task_id, **artifact) for artifact in artifacts]
 
-    def _save_report(self, db, task_id, format, relative_path, sha256):
+    def _save_report(self, db, task_id, format, relative_path, sha256, report_id=None):
         path = PurePosixPath(relative_path)
         if (format not in {'html', 'json'} or not relative_path or path.is_absolute()
                 or '..' in path.parts or ':' in relative_path or chr(92) in relative_path
@@ -250,7 +259,7 @@ class TaskRepository:
             if existing['relative_path'] != relative_path or existing['sha256'] != sha256:
                 raise ValueError('conflicting report already saved')
             return existing['id']
-        report_id = str(uuid4())
+        report_id = str(UUID(report_id)) if report_id is not None else str(uuid4())
         db.execute('INSERT INTO reports VALUES (?,?,?,?,?,?)',
                    (report_id, task_id, format, relative_path, sha256, time.time()))
         return report_id

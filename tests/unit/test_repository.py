@@ -31,6 +31,50 @@ def add(repo, inputs):
     return repo.insert_task(*inputs, platform_sha='test-sha', sut_sha=None)
 
 
+def test_report_snapshot_is_consistent_during_result_commit(repo, inputs, monkeypatch):
+    task_id = add(repo, inputs)
+    repo.transition(task_id, {'PENDING'}, 'RUNNING')
+    original = repo._record
+    def commit_after_task_read(db, row):
+        task = original(db, row)
+        repo.save_case_result(task_id, CaseResult(case=inputs[2][0], status='PASSED',
+            observation=Observation(kind='verdict', verdict=inputs[2][0].expected_status)))
+        return task
+    monkeypatch.setattr(repo, '_record', commit_after_task_read)
+    snapshot = repo.report_snapshot(task_id)
+    assert snapshot.task.counts['passed'] == 0
+    assert all(case.result is None for case in snapshot.cases)
+    monkeypatch.setattr(repo, '_record', original)
+    newer = repo.report_snapshot(task_id)
+    assert newer.task.counts['passed'] == 1
+    assert newer.cases[0].result['assertion_status'] == 'PASSED'
+
+
+def test_snapshot_generator_returns_artifacts_and_rejects_unfinished(repo, inputs, tmp_path):
+    import hashlib
+    from core_engine.report_engine.report_generator import ReportGenerator
+    from core_engine.report_engine.snapshot import ReportArtifact
+    task_id = add(repo, inputs)
+    generator = ReportGenerator(tmp_path / 'reports')
+    with pytest.raises(ValueError, match='unfinished'):
+        generator.generate(repo.report_snapshot(task_id))
+    repo.transition(task_id, {'PENDING'}, 'RUNNING')
+    repo.finish_unstarted_cases(task_id, 'ERROR', 'INJECTED_FAILURE')
+    snapshot = repo.report_snapshot(task_id)
+    artifacts = generator.generate(snapshot, secrets=(snapshot.cases[0].id[0],))
+    assert {a.format for a in artifacts} == {'json', 'html'}
+    assert all(isinstance(a, ReportArtifact) for a in artifacts)
+    assert len({a.id for a in artifacts}) == 2
+    report_json = next(a for a in artifacts if a.format == 'json')
+    exported = json.loads((generator.output_dir / report_json.relative_path).read_text(encoding='utf-8'))
+    assert [c['stored_case_id'] for c in exported['all_cases']] == [c.id for c in snapshot.cases]
+    for a in artifacts:
+        assert hashlib.sha256((generator.output_dir / a.relative_path).read_bytes()).hexdigest() == a.sha256
+    repo.save_reports(task_id, [dict(report_id=a.id, format=a.format, relative_path=a.relative_path, sha256=a.sha256)
+                               for a in artifacts])
+    assert {row['id'] for row in repo.list_reports(task_id)} == {a.id for a in artifacts}
+
+
 def test_inputs_survive_reopen_with_exact_source(repo, inputs):
     from storage.repository import TaskRepository
     task_id = add(repo, inputs)

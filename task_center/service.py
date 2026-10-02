@@ -196,23 +196,7 @@ class TaskService:
                                      error={**(self.get(task_id).error or {}), 'stage': stage, 'reason': reason})
 
     def task_result(self, task_id):
-        task = self.get(task_id)
-        result = TaskResult(total=task.counts['total'], passed=task.counts['passed'],
-                            failed=task.counts['failed'], error=task.counts['error'],
-                            cancelled=task.counts['cancelled'], start_time=task.started_at or task.created_at)
-        for stored in self.repo.list_cases(task_id):
-            row = stored.result
-            if row is None:
-                continue
-            actual = Observation(**row['actual']) if row['actual'] else None
-            result.case_results.append(CaseResult(
-                case=stored.to_case(), status=row['assertion_status'], observation=actual,
-                actual_status=(actual.verdict or actual.error_code or f'HTTP_{actual.http_status}') if actual else '',
-                error_message=row['reason'], start_time=row['started_at'], end_time=row['finished_at'],
-                attempt_count=row['attempt_count']))
-        result.remote_execution_may_continue = bool((task.error or {}).get('remote_execution_may_continue'))
-        result.end_time = task.finished_at or max((r.end_time for r in result.case_results), default=result.start_time)
-        return result
+        return self.repo.report_snapshot(task_id).to_result()
 
     def _write_reports(self, task_id):
         # Both formats use persisted results. Publish complete files before registering
@@ -220,20 +204,20 @@ class TaskService:
         directory = (self.report_root / task_id).resolve()
         if not directory.is_relative_to(self.report_root):
             raise ValueError('report path escapes report root')
-        task = self.get(task_id)
-        context = {key: getattr(task, key) for key in
-                   ('id', 'name', 'profile', 'profile_sha256', 'platform_sha', 'sut_sha', 'created_at', 'started_at')}
+        snapshot = self.repo.report_snapshot(task_id)
         credentials = self._credentials.get(task_id)
         secrets = (credentials.password.get_secret_value(),) if credentials is not None else ()
-        info = ReportGenerator(directory).generate(self.task_result(task_id), task.config,
-                                                   task_context=context, secrets=secrets)
-        paths = [Path(info[f'{format}_path']).resolve() for format in ('json', 'html')]
+        generated = ReportGenerator(directory).generate(snapshot, secrets=secrets)
+        paths = [(directory / artifact.relative_path).resolve() for artifact in generated]
         if any(not path.is_relative_to(directory) for path in paths):
             raise ValueError('generated report escapes task directory')
         try:
-            artifacts = [dict(format=format, relative_path=path.relative_to(self.report_root).as_posix(),
-                              sha256=hashlib.sha256(path.read_bytes()).hexdigest())
-                         for format, path in zip(('json', 'html'), paths)]
+            artifacts = []
+            for artifact, path in zip(generated, paths, strict=True):
+                if hashlib.sha256(path.read_bytes()).hexdigest() != artifact.sha256:
+                    raise ValueError('generated report integrity check failed')
+                artifacts.append(dict(format=artifact.format, report_id=artifact.id,
+                                      relative_path=path.relative_to(self.report_root).as_posix(), sha256=artifact.sha256))
             self.repo.save_reports(task_id, artifacts)
         except BaseException:
             for path in paths:

@@ -339,6 +339,27 @@
       "review": "Independent review confirmed diagnostic leak and canonical-field corruption; fixed with red/green tests. Follow-up distribution-key leak also fixed with a regression; final narrow rereview found no blockers.",
       "artifacts": [
         "artifacts/s07c-redaction.xml"
+      ],
+      "commit": "adca5f4685d1e645f9e65a46b8b941ac929d0b1e",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S07d",
+      "commit_locator": "feat: generate reports from consistent durable snapshots",
+      "environment": "Windows Python 3.12.10",
+      "red": "Snapshot method absent; interleaved WAL writer test defines coherent read requirement. Snapshot-path short-secret regression reproduced corrupted stored_case_id before fix.",
+      "command": "python -m pytest -q --junitxml=artifacts/s07d-snapshots.xml",
+      "exit_code": 0,
+      "passed": 254,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation"
+      ],
+      "scope": "One-transaction task/profile/config/case/result snapshot; ReportSnapshot and ReportArtifact interface; unfinished snapshot rejection; artifact IDs/digests preserved on registration; legacy generate signature retained. JSON/HTML content and MIME, corruption422, missing404, path-boundary422 on v1 and both report aliases. Original source/hash and stored-case identity retained under redaction. Windows HTTP Mock; no real C++ or power-loss proof.",
+      "review": "Independent review found stored_case_id redaction regression; deterministic short-secret snapshot test reproduced it, canonical restoration fixed it. Narrow rereview found no blockers.",
+      "artifacts": [
+        "artifacts/s07d-snapshots.xml"
       ]
     }
   ]
