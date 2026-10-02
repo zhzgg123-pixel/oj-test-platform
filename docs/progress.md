@@ -10,7 +10,7 @@
 | S03 配置与入口 | PASS | `5d5b8fe` 已同步并核对远端； Web/CLI 同一 TaskConfig；空任务／非法配置拒绝；退出码、凭据分离、lifespan、文件重载、报告下载通过，144 测试通过（1 条上游弃用提示） |
 | S04 YAML 题目 | PASS | `47294ab` 已同步并核对远端；S04b 两题配置、三类策略、精确总数、seed／源码哈希、匿名会话隔离、Web／CLI 接通；171 测试通过（1 条上游弃用提示）。HTTP Mock 不证明真实 C++ 判题 |
 | S05 SQLite | PASS (Windows/Mock) | 四表、输入快照、结果幂等、运行锁、重启恢复、队列20、Web／CLI共用服务、历史／源码／报告API、旧入口兼容、schema v1→v2保留历史；214 测试通过（1 条上游弃用提示）。独立审查发现的时间字符串／报告大小兼容问题已修复并复测。POSIX 锁待 S09／S11 |
-| S06 并发与取消 | NOT_RUN | |
+| S06 并发与取消 | IN_PROGRESS | S06a 有界future、逐用例独立会话、Web／CLI并发入口、乱序结果归属、登录／持久化失败停止补位；226测试通过。完整并发取消边界待S06b |
 | S07 报告 | NOT_RUN | |
 | S08 Web | NOT_RUN | |
 | S09 Docker | NOT_RUN | |

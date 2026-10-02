@@ -96,7 +96,7 @@ class SequentialExecutor(BaseExecutor):
         result.end_time = time.time()
         return result
 
-    def _execute_one(self, case: TestCase, adapter: BaseOJAdapter) -> CaseResult:
+    def _execute_one(self, case: TestCase, adapter: BaseOJAdapter, *, anonymous_isolated=False) -> CaseResult:
         """Validate intent first, then interpret only an explicit observation."""
         cr = CaseResult(case=case, status="RUNNING", start_time=time.time(), attempt_count=0)
         anonymous_adapter = None
@@ -108,7 +108,7 @@ class SequentialExecutor(BaseExecutor):
                 cr.error_message = "Invalid expectation: replace generic ERROR with a specific HTTP or business expectation"
                 return cr
 
-            if case.auth_mode == "anonymous":
+            if case.auth_mode == "anonymous" and not anonymous_isolated:
                 anonymous_adapter = type(adapter)(base_url=adapter.base_url, timeout=adapter.timeout)
                 adapter = anonymous_adapter
             cr.attempt_count = 1

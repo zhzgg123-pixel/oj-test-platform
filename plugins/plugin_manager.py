@@ -4,7 +4,7 @@
 职责：
 1. 扫描 plugins 目录加载所有适配器
 2. 按名称查找适配器
-3. 管理适配器实例（带缓存）
+3. 创建由调用方独占的适配器实例
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ class PluginManager:
 
     def __init__(self):
         self._adapters: dict[str, type[BaseOJAdapter]] = {}
-        self._instances: dict[str, BaseOJAdapter] = {}
         self._scan_plugins()
 
     def _scan_plugins(self) -> None:
@@ -58,23 +57,18 @@ class PluginManager:
         """按名称获取适配器类"""
         return self._adapters.get(name)
 
-    def create_instance(
-        self, name: str, base_url: str, timeout: int = 30
-    ) -> Optional[BaseOJAdapter]:
-        """创建适配器实例（带缓存，相同 name+base_url 复用）"""
-        cache_key = f"{name}@{base_url}"
-        if cache_key in self._instances:
-            return self._instances[cache_key]
-
+    def create_adapter(self, name: str, base_url: str, timeout: float = 30) -> BaseOJAdapter:
+        """Every call creates a fresh session. The caller must close its adapter."""
         adapter_cls = self.get_adapter(name)
-        if not adapter_cls:
-            return None
+        if adapter_cls is None:
+            raise ValueError('unknown adapter')
+        return adapter_cls(base_url=base_url, timeout=timeout)
 
-        instance = adapter_cls(base_url=base_url, timeout=timeout)
-        self._instances[cache_key] = instance
-        return instance
+    def create_instance(self, name: str, base_url: str, timeout: float = 30):
+        """Compatibility alias without the former cross-task session cache."""
+        if self.get_adapter(name) is None:
+            return None
+        return self.create_adapter(name, base_url, timeout)
 
     def remove_instance(self, name: str, base_url: str) -> None:
-        """移除适配器实例"""
-        cache_key = f"{name}@{base_url}"
-        self._instances.pop(cache_key, None)
+        """Compatibility no-op; callers close the instances they own."""

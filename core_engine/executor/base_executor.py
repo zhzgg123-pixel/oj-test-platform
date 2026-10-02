@@ -64,6 +64,8 @@ class TaskResult:
     case_results: list[CaseResult] = field(default_factory=list)
     start_time: float = 0.0
     end_time: float = 0.0
+    failure_stage: str = ''
+    failure_reason: str = ''
 
     @property
     def pass_rate(self) -> float:

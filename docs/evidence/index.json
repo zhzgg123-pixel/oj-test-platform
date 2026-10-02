@@ -234,7 +234,28 @@
       "review": "Independent read-only review found timestamp string and report size regressions; both fixed, reviewer reran 2 targeted tests and confirmed no remaining S05 blockers.",
       "artifacts": [
         "artifacts/s05b-entrypoints.xml"
-      ]
+      ],
+      "commit": "8090a657dfeff71db881c04ef6c992d3fb776c85",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S06a",
+      "commit_locator": "feat: isolate adapters and enable bounded concurrency",
+      "environment": "Windows Python 3.12.10",
+      "red": "5 concurrency tests failed before fresh factory, bounded scheduler and public mode wiring; mixed-result delay injection added after explicit test failure; 4 plugin-test ownership cases failed before finally-close migration",
+      "command": "python -m pytest -q --junitxml=artifacts/s06a-concurrency.xml",
+      "exit_code": 0,
+      "passed": 226,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "12 HTTP integration tests: real overlap and bounded submitted futures, own-session fingerprints, anonymous no-cookie request, reordered verdict/source matching, same-worker cleanup, login and callback failure stop refill, public API and subprocess CLI concurrency. Full cancellation acceptance remains S06b; no real C++ execution proof. Plugin health/login/rejection/exception paths close their fresh adapter and omit session IDs/raw exception text.",
+      "artifacts": [
+        "artifacts/s06a-concurrency.xml"
+      ],
+      "review": "Independent read-only review found a remaining plugin-test caller lacking close; fixed with four red/green regression scenarios and narrow reviewer verification. No blocking S06a findings."
     }
   ]
 }

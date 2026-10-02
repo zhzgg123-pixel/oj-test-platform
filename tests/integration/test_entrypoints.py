@@ -43,7 +43,7 @@ def test_import_has_no_runtime_directory_side_effects(tmp_path):
 
 @pytest.mark.parametrize('overrides', [
     {'strategies': []}, {'strategies': ['unknown']}, {'case_count': 0},
-    {'poll_timeout': 0}, {'mode': 'concurrent', 'max_workers': 2},
+    {'poll_timeout': 0}, {'mode': 'concurrent', 'max_workers': 17},
 ])
 def test_api_rejects_invalid_tasks_before_network(config_path, mock_oj, overrides):
     app = create_app(config_path=str(config_path))

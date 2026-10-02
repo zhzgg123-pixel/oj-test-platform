@@ -43,8 +43,6 @@ def validated_config(req, request):
         config = TaskConfig.model_validate(values)
     except ValidationError as exc:
         raise HTTPException(422, detail=exc.errors(include_input=False, include_context=False, include_url=False)) from None
-    if config.mode != 'sequential':
-        raise HTTPException(422, detail='concurrent mode is not enabled until S06')
     if request.app.state.plugin_manager.get_adapter(config.adapter_name) is None:
         raise HTTPException(422, detail='unknown adapter')
     try:

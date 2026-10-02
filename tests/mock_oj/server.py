@@ -10,6 +10,7 @@ import hashlib
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import math
 import re
 import socket
 import threading
@@ -21,11 +22,15 @@ class MockOJServer:
     SCENARIOS = {'all-verdicts', 'login-rejected', 'problem-not-found', 'malformed', 'slow', 'disconnect'}
 
     def __init__(self, scenario='all-verdicts', delay=0.3, get_statuses=None, submit_status=200,
-                 response_override=None):
+                 response_override=None, verdict_delays=None):
         if scenario not in self.SCENARIOS:
             raise ValueError(f'unknown Mock OJ scenario: {scenario}')
         if delay < 0:
             raise ValueError('delay must be non-negative')
+        self.verdict_delays = dict(verdict_delays or {})
+        if any(k not in {'AC', 'WA', 'CE', 'TLE', 'RE'} or not math.isfinite(v) or v < 0
+               for k, v in self.verdict_delays.items()):
+            raise ValueError('invalid verdict delay')
         self.scenario = scenario
         self.delay = delay
         self.get_statuses = list(get_statuses or [])
@@ -184,6 +189,7 @@ class MockOJServer:
                         return
                     verdict_match = re.search(r'//\s*verdict:(AC|WA|CE|TLE|RE)\b', str(code))
                     verdict = verdict_match[1] if verdict_match else 'AC'
+                    owner._stop.wait(owner.verdict_delays.get(verdict, 0))
                     self.reply(200, {
                         'result': verdict, 'passed': 2 if verdict == 'AC' else 0, 'total': 2,
                         'time_ms': None if verdict == 'CE' else 1,

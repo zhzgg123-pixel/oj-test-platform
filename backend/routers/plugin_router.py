@@ -31,7 +31,7 @@ async def list_plugins(request: Request):
 
 
 @router.post("/test")
-async def test_plugin(req: TestPluginRequest, request: Request):
+def test_plugin(req: TestPluginRequest, request: Request):
     """测试 OJ 连接"""
     plugin_manager = request.app.state.plugin_manager
     adapter = plugin_manager.create_instance(
@@ -49,7 +49,6 @@ async def test_plugin(req: TestPluginRequest, request: Request):
             return {
                 "success": result.success,
                 "message": result.message or ("登录成功" if result.success else "登录失败"),
-                "session_id": result.session_id,
             }
         else:
             healthy = adapter.health_check()
@@ -60,5 +59,8 @@ async def test_plugin(req: TestPluginRequest, request: Request):
     except Exception as e:
         return {
             "success": False,
-            "message": f"连接异常: {str(e)}",
+            "message": f"连接异常: {type(e).__name__}",
         }
+
+    finally:
+        adapter.close()

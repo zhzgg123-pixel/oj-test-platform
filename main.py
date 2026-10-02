@@ -59,8 +59,6 @@ def run_ci(args):
                                     runtime_overrides={'db_path': args.db_path, 'report_dir': args.report_dir})
         config = app_config.task_config()
         ProfileLoader().load(config.profile_id)
-        if config.mode != 'sequential':
-            raise ValueError('concurrent mode is not enabled until S06')
         credentials = ExecutionCredentials(username=args.username or os.getenv('OJ_USERNAME', ''),
                                              password=os.getenv('OJ_PASSWORD', ''))
         if PluginManager().get_adapter(config.adapter_name) is None:

@@ -14,6 +14,7 @@ from core_engine.case_engine.case_builder import CaseBuilder
 from core_engine.contracts import Observation
 from core_engine.executor.base_executor import CaseResult, TaskResult
 from core_engine.executor.sequential_executor import SequentialExecutor
+from core_engine.executor.concurrent_executor import ConcurrentExecutor
 from core_engine.report_engine.report_generator import ReportGenerator
 from plugins.plugin_manager import PluginManager
 from storage.repository import ACTIVE, TERMINAL
@@ -59,10 +60,7 @@ class TaskService:
         self.closed = False
 
     def _new_adapter(self, name, base_url, timeout):
-        adapter_type = self._plugins.get_adapter(name)
-        if adapter_type is None:
-            raise ValueError('unknown adapter')
-        return adapter_type(base_url=base_url, timeout=timeout)
+        return self._plugins.create_adapter(name, base_url, timeout)
 
     def start(self):
         with self._condition:
@@ -81,8 +79,6 @@ class TaskService:
 
     def create(self, config, credentials=None, name=''):
         config = TaskConfig.model_validate(config.to_dict() if isinstance(config, TaskConfig) else config)
-        if config.mode != 'sequential':
-            raise ValueError('concurrent mode is not enabled until S06')
         if self._plugins.get_adapter(config.adapter_name) is None:
             raise ValueError('unknown adapter')
         credentials = credentials or ExecutionCredentials()
@@ -156,18 +152,28 @@ class TaskService:
             task = self.get(task_id)
             config = TaskConfig.model_validate(task.config)
             cases = [stored.to_case() for stored in self.repo.list_cases(task_id)]
-            adapter = self.adapter_factory(config.adapter_name, config.base_url, config.request_timeout)
-            if any(case.auth_mode != 'anonymous' for case in cases) and not cancel_event.is_set():
-                stage = 'login'
-                auth = adapter.login(credentials.username, credentials.password.get_secret_value())
-                if not auth.success:
-                    self._fail(task_id, stage, 'LOGIN_FAILED')
+            callbacks = dict(cancel_event=cancel_event,
+                             on_case_start=lambda case: self.repo.mark_case_running(task_id, case.id),
+                             on_case_result=lambda result: self.repo.save_case_result(task_id, result))
+            if config.mode == 'concurrent':
+                stage = 'execute'
+                summary = ConcurrentExecutor(config.poll_interval, config.poll_timeout, config.max_workers).execute(
+                    cases, adapter_factory=lambda: self.adapter_factory(config.adapter_name, config.base_url, config.request_timeout),
+                    username=credentials.username, password=credentials.password.get_secret_value(), **callbacks)
+                if summary.failure_reason:
+                    self._fail(task_id, summary.failure_stage, summary.failure_reason)
                     return
-            stage = 'execute'
-            SequentialExecutor(config.poll_interval, config.poll_timeout).execute(
-                cases, adapter, login_required=False, cancel_event=cancel_event,
-                on_case_start=lambda case: self.repo.mark_case_running(task_id, case.id),
-                on_case_result=lambda result: self.repo.save_case_result(task_id, result))
+            else:
+                adapter = self.adapter_factory(config.adapter_name, config.base_url, config.request_timeout)
+                if any(case.auth_mode != 'anonymous' for case in cases) and not cancel_event.is_set():
+                    stage = 'login'
+                    auth = adapter.login(credentials.username, credentials.password.get_secret_value())
+                    if not auth.success:
+                        self._fail(task_id, stage, 'LOGIN_FAILED')
+                        return
+                stage = 'execute'
+                SequentialExecutor(config.poll_interval, config.poll_timeout).execute(
+                    cases, adapter, login_required=False, **callbacks)
             stage = 'report'
             self._write_reports(task_id)
             with self._condition:

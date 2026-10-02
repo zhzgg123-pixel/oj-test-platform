@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 214 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**完整并发入口、完整证据报告、Docker、真实 OJ 联调和 CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 226 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**并发取消的完整验收、完整证据报告、Docker、真实 OJ 联调和 CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -42,7 +42,7 @@ E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺
 
 CLI 密码通过 `OJ_PASSWORD` 传入，用户名通过 `OJ_USERNAME` 或 `--username` 传入；不再接受 `--password`。不要把真实凭据提交到仓库。
 
-任务参数优先级为显式 CLI 参数 > `OJ_*` 环境变量 > 指定 YAML > 默认值。支持 `--problem-id`（兼容 `--problem`）、`--case-count`（兼容 `--count`）、`--seed`、`--timeout`、`--poll-timeout` 、`--db` 和 `--report-dir`。并发模式在 S06 接通前明确拒绝，不会静默变成顺序。
+任务参数优先级为显式 CLI 参数 > `OJ_*` 环境变量 > 指定 YAML > 默认值。支持 `--problem-id`（兼容 `--problem`）、`--case-count`（兼容 `--count`）、`--seed`、`--timeout`、`--poll-timeout` 、`--db` 和 `--report-dir`。通过 `--mode concurrent --max-workers 3` 选择线程池并发（1–16 worker）；API 使用同名字段。
 
 CLI 退出码：0 表示至少执行一条且全部通过、报告生成成功；1 表示运行或用例失败；2 表示参数／配置错误或同库执行锁冲突；130 表示 Ctrl+C。`--output` 和报告只保存非秘密任务配置。
 
@@ -75,3 +75,9 @@ Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源�
 | `DELETE /api/v1/tasks/{id}` | 仅删除终态任务及其报告；活动任务 409 |
 
 旧 `/api/tasks` 委托同一服务，保留旧页面需要的时间字符串和返回字段。报告别名 `/reports/{任务UUID}.json`／`.html` 及已有平铺报告仍可读取。CLI 的 `--output` 返回 task_id，该任务之后可通过 Web 查询。
+
+## 有界并发
+
+并发调度最多保留 max_workers 个在途 future，完成后才补充新用例。每个执行用例创建并关闭自己的 Adapter／Session，认证用例独立登录，匿名用例不带 Cookie；因此登录请求数会随认证用例数增加。旧 create_instance 工厂也不再缓存实例，调用者负责 close。
+
+顺序和并发复用同一单用例判定逻辑及逐条持久化回调。结果按输入顺序输出；任一 worker 登录／准备失败会停止补位并明确失败，持久化失败不自动重提代码。HTTP Mock 已验证请求重叠、future 数量上限、乱序结果归属及会话隔离；并发取消的完整边界与远端仍可能执行的提示在 S06b 继续验收。
