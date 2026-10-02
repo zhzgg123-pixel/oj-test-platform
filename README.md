@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。**判定缺陷修复、SQLite、YAML 题目配置、完整并发入口、Docker、CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；目前 94 条本地回归通过。**SQLite、YAML 题目配置、完整并发入口、Docker、CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -28,3 +28,7 @@ E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺
 - 不提交密码、Cookie、令牌、运行数据库或历史报告。已移除导入源码的默认密码。
 - 按 [实施计划](docs/implementation-plan.md) 小步修改、测试、提交、推送，核对 Gitee 远端 SHA。
 - 设计与验收口径见 [设计约定](docs/design-contract.md)。
+
+## Adapter 兼容约定
+
+新增 `submit_case(case) -> SubmissionReceipt` / `get_result(id)` 接口；旧 `submit_code` 和 `get_judge_result` 保留供现有插件迁移。LocalOJ 是同步协议，必须读取本次回执，不支持凭任意 ID 读取最近结果。`AuthResult` 兼容旧 `LoginResult` 名称。登录参数统一将在 S03 配置层接入。旧 `expected_status="ERROR"` 不再有效，需使用明确 HTTP 或业务错误预期；生成器的全面配置迁移在 S04 完成。

@@ -1,128 +1,145 @@
-"""
-LocalOJAdapter - cpp-oj 系统的适配器实现
-
-该 OJ 系统特点：
-- 认证方式：Cookie + Session
-- 判题为同步（提交后直接返回判题结果，无需轮询）
-"""
-
+"""cpp-oj's cookie-authenticated, synchronous HTTP protocol adapter."""
 from __future__ import annotations
-from typing import Optional, Any
+
+import requests
+from typing import Optional
+
 from ..base_adapter import BaseOJAdapter, LoginResult, SubmitResult, JudgeResult
 from core_engine.api_client.request_client import RequestClient
+from core_engine.contracts import Observation, VERDICTS
 
 
 class LocalOJAdapter(BaseOJAdapter):
-    """cpp-oj 系统适配器"""
+    BUSINESS_ERRORS = {'Problem not found': 'PROBLEM_NOT_FOUND', 'Code is required': 'CODE_REQUIRED'}
+    EVIDENCE_FIELDS = {'result', 'passed', 'total', 'time_ms', 'memory_kb', 'compile_error', 'detail', 'success', 'error'}
 
-    def __init__(self, base_url: str, timeout: int = 30):
+    def __init__(self, base_url: str, timeout: float = 30):
         super().__init__(base_url, timeout)
-        self._client = RequestClient(
-            base_url=base_url,
-            timeout=timeout,
-        )
-        # 存储最近一次提交的判题结果（同步判题，无需轮询）
-        self._last_judge_result: Optional[JudgeResult] = None
+        self._client = RequestClient(base_url=base_url, timeout=timeout)
+        self._secrets = set()
+
+    def _safe_evidence(self, data):
+        def clean(value):
+            if isinstance(value, str):
+                for secret in sorted(self._secrets, key=len, reverse=True):
+                    value = value.replace(secret, '[REDACTED]')
+                return value
+            return value if value is None or type(value) in (int, float, bool) else '[INVALID_FIELD]'
+        return {key: clean(value) for key, value in data.items() if key in self.EVIDENCE_FIELDS}
 
     def health_check(self) -> bool:
-        """检查 cpp-oj 服务是否可用"""
         try:
-            self._client.get("/")
-            return True
-        except Exception:
+            return self._client.get('/').status_code == 200
+        except requests.RequestException:
             return False
 
     def login(self, username: str, password: str) -> LoginResult:
-        """
-        POST /api/login
-        Cookie 由 RequestClient 自动维护
-        """
+        # Failed reauthentication must not leave an earlier logged-in cookie behind.
+        self._client.clear_session()
+        if password:
+            self._secrets.add(password)
         try:
-            resp = self._client.post(
-                "/api/login",
-                data={"username": username, "password": password},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("success"):
-                    return LoginResult(
-                        success=True,
-                        session_id=self._client.get_session_id(),
-                    )
-            return LoginResult(success=False, message=f"登录失败: HTTP {resp.status_code}")
-        except Exception as e:
-            return LoginResult(success=False, message=str(e))
+            response = self._client.post('/api/login', data={'username': username, 'password': password})
+            if response.status_code != 200:
+                return LoginResult(False, message=f'Login rejected: HTTP {response.status_code}')
+            data = response.json()
+            if not isinstance(data, dict) or data.get('success') is not True:
+                return LoginResult(False, message='Login rejected or invalid login response')
+            session = self._client.get_session_id()
+            if not session:
+                return LoginResult(False, message='Login response missing session cookie')
+            self._secrets.add(session)
+            return LoginResult(True, session_id=session)
+        except (requests.RequestException, ValueError) as exc:
+            return LoginResult(False, message=f'Login failed: {type(exc).__name__}')
 
-    def submit_code(self, problem_id: str, code: str, lang: str = "cpp") -> SubmitResult:
-        """
-        POST /api/submit/{problem_id}
+    def _error(self, kind, code=None, http_status=None, evidence=None):
+        observation = Observation(kind=kind, error_code=code, http_status=http_status, evidence=evidence or {})
+        return SubmitResult(False, message=code or f'HTTP {http_status}', observation=observation)
 
-        该 OJ 同步判题，提交后直接返回判题结果。
-        将结果缓存到 self._last_judge_result 供 get_judge_result() 读取。
-        """
-        self._last_judge_result = None
-
+    def submit_code(self, problem_id: str, code: str, lang: str = 'cpp') -> SubmitResult:
         try:
-            resp = self._client.post(
-                f"/api/submit/{problem_id}",
-                data={"code": code, "lang": lang},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-
-                # 判题结果直接包含在响应中
-                result_status = data.get("result", "")
-
-                if result_status:
-                    # 映射字段名（该 OJ 使用 result/compile_error/time_ms/memory_kb）
-                    self._last_judge_result = JudgeResult(
-                        status=result_status,
-                        passed=data.get("passed", 0),
-                        total=data.get("total", 0),
-                        time_used_ms=data.get("time_ms", 0) or 0,
-                        memory_used_kb=data.get("memory_kb", 0) or 0,
-                        compile_msg=data.get("compile_error", "") or "",
-                        run_msg=data.get("detail", "") or "",
-                        raw_response=data,
-                    )
-
-                return SubmitResult(
-                    success=True,
-                    submit_id="",  # 同步判题，无 submit_id
-                    message="提交成功（同步判题）",
-                    judge_result=self._last_judge_result,
-                )
-            return SubmitResult(success=False, message=f"提交失败: HTTP {resp.status_code}")
-        except Exception as e:
-            return SubmitResult(success=False, message=str(e))
+            response = self._client.post(f'/api/submit/{problem_id}', data={'code': code, 'lang': lang})
+        except requests.Timeout:
+            return self._error('transport_error', 'READ_TIMEOUT')
+        except requests.ConnectionError:
+            return self._error('transport_error', 'CONNECTION_ERROR')
+        except requests.RequestException:
+            return self._error('transport_error', 'REQUEST_ERROR')
+        status = response.status_code
+        if status >= 400:
+            return self._error('http_error', http_status=status)
+        if status != 200:
+            return self._error('protocol_error', 'UNEXPECTED_HTTP_STATUS', status)
+        try:
+            data = response.json()
+        except ValueError:
+            return self._error('protocol_error', 'INVALID_JSON', status)
+        if not isinstance(data, dict):
+            return self._error('protocol_error', 'INVALID_RESPONSE_SHAPE', status)
+        safe = self._safe_evidence(data)
+        if 'success' in data and type(data['success']) is not bool:
+            return self._error('protocol_error', 'INVALID_RESPONSE_SHAPE', status, safe)
+        if data.get('success') is False:
+            if 'result' in data:
+                return self._error('protocol_error', 'CONTRADICTORY_RESPONSE', status, safe)
+            error = data.get('error')
+            mapped = self.BUSINESS_ERRORS.get(error) if isinstance(error, str) else None
+            if mapped:
+                return self._error('business_error', mapped, status, safe)
+            return self._error('protocol_error', 'UNKNOWN_BUSINESS_ERROR', status, safe)
+        verdict = data.get('result')
+        if not verdict:
+            return self._error('protocol_error', 'MISSING_VERDICT', status, safe)
+        if verdict not in VERDICTS:
+            return self._error('protocol_error', 'UNKNOWN_VERDICT', status, safe)
+        metrics = {}
+        for key in ('passed', 'total', 'time_ms', 'memory_kb'):
+            value = data.get(key, 0)
+            if value is None and key in ('time_ms', 'memory_kb'):
+                value = 0
+            if type(value) is not int or value < 0:
+                return self._error('protocol_error', 'INVALID_METRICS', status, safe)
+            metrics[key] = value
+        if metrics['passed'] > metrics['total']:
+            return self._error('protocol_error', 'INVALID_METRICS', status, safe)
+        for key in ('compile_error', 'detail'):
+            if data.get(key) is not None and not isinstance(data[key], str):
+                return self._error('protocol_error', 'INVALID_RESPONSE_SHAPE', status, safe)
+        judge = JudgeResult(status=verdict, passed=metrics['passed'], total=metrics['total'],
+                            time_used_ms=metrics['time_ms'], memory_used_kb=metrics['memory_kb'],
+                            compile_msg=safe.get('compile_error') or '', run_msg=safe.get('detail') or '',
+                            raw_response=safe)
+        return SubmitResult(True, judge_result=judge,
+                            observation=Observation(kind='verdict', verdict=verdict, http_status=200, evidence=safe))
 
     def get_judge_result(self, submit_id: str) -> Optional[JudgeResult]:
-        """
-        获取判题结果。
-
-        该 OJ 为同步判题，没有 /api/result/{id} 轮询接口。
-        直接从 submit_code() 缓存的结果返回。
-        """
-        return self._last_judge_result
+        # There is no result-query endpoint in this synchronous OJ. Never return
+        # another submission's result. Callers must consume their own receipt.
+        return None
 
     def get_problem_list(self) -> list[dict]:
-        """GET /api/problems 获取题目列表"""
         try:
-            resp = self._client.get("/api/problems")
-            if resp.status_code == 200:
-                data = resp.json()
-                return data.get("problems", data if isinstance(data, list) else [])
-            return []
-        except Exception:
+            response = self._client.get('/api/problems')
+            if response.status_code != 200:
+                return []
+            data = response.json()
+            problems = data.get('problems', []) if isinstance(data, dict) else data
+            return problems if isinstance(problems, list) else []
+        except (requests.RequestException, ValueError):
             return []
 
     def get_problem_detail(self, problem_id: str) -> Optional[dict]:
-        """GET /api/problems/{id} 获取题目详情"""
         try:
-            resp = self._client.get(f"/api/problems/{problem_id}")
-            if resp.status_code == 200:
-                data = resp.json()
-                return data if isinstance(data, dict) else data.get("problem")
+            response = self._client.get(f'/api/problems/{problem_id}')
+            if response.status_code != 200:
+                return None
+            data = response.json()
+            return data if isinstance(data, dict) else None
+        except (requests.RequestException, ValueError):
             return None
-        except Exception:
-            return None
+
+    def close(self):
+        self._client.clear_session()
+        self._client.close()
+        self._secrets.clear()

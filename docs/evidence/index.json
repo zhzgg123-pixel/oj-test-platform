@@ -62,6 +62,23 @@
       "scope": "Real HTTP request counts, GET bounded transient retries, POST single attempt including 307/308",
       "artifacts": [
         "artifacts/s02b-retries.xml"
+      ],
+      "commit": "a306fa9188f0995c494717decb818d317334891a",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S02b-adapter",
+      "commit_locator": "fix: parse OJ responses into isolated submission results",
+      "environment": "Windows Python 3.12.10",
+      "red": "14 adapter regressions failed: business rejection treated as success, malformed metrics passed, foreign IDs returned latest result, auth fields retained",
+      "command": "python -m pytest -q --junitxml=artifacts/s02b-adapter.xml",
+      "exit_code": 0,
+      "passed": 94,
+      "failed": 0,
+      "scope": "HTTP Mock contracts, LocalOJAdapter parsing, own-receipt results, strict Oracle, bounded retries; real C++ E2E still NOT_RUN",
+      "artifacts": [
+        "artifacts/s02b-adapter.xml"
       ]
     }
   ]

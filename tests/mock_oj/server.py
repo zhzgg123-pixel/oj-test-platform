@@ -20,7 +20,8 @@ import uuid
 class MockOJServer:
     SCENARIOS = {'all-verdicts', 'login-rejected', 'problem-not-found', 'malformed', 'slow', 'disconnect'}
 
-    def __init__(self, scenario='all-verdicts', delay=0.3, get_statuses=None, submit_status=200):
+    def __init__(self, scenario='all-verdicts', delay=0.3, get_statuses=None, submit_status=200,
+                 response_override=None):
         if scenario not in self.SCENARIOS:
             raise ValueError(f'unknown Mock OJ scenario: {scenario}')
         if delay < 0:
@@ -29,6 +30,7 @@ class MockOJServer:
         self.delay = delay
         self.get_statuses = list(get_statuses or [])
         self.submit_status = submit_status
+        self.response_override = response_override
         self._lock = threading.Lock()
         self._release = threading.Event()
         self._release.set()
@@ -176,6 +178,9 @@ class MockOJServer:
                         self.close_connection = True
                         self.connection.shutdown(socket.SHUT_RDWR)
                         self.connection.close()
+                        return
+                    if owner.response_override is not None:
+                        self.reply(200, owner.response_override)
                         return
                     verdict_match = re.search(r'//\s*verdict:(AC|WA|CE|TLE|RE)\b', str(code))
                     verdict = verdict_match[1] if verdict_match else 'AC'

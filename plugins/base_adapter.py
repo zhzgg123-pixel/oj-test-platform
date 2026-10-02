@@ -5,7 +5,7 @@ OJ 系统适配器抽象基类 - BaseOJAdapter
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -45,11 +45,15 @@ class SubmitResult:
 
 
 @dataclass
-class LoginResult:
+class AuthResult:
     """登录结果"""
     success: bool
-    session_id: Optional[str] = None
+    session_id: Optional[str] = field(default=None, repr=False)
     message: str = ""
+
+
+# Preserve the public name used by existing adapters while exposing the new contract.
+LoginResult = AuthResult
 
 
 class BaseOJAdapter(ABC):
@@ -63,6 +67,29 @@ class BaseOJAdapter(ABC):
     def __init__(self, base_url: str, timeout: int = 30):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+
+    def submit_case(self, case):
+        """New receipt interface; existing third-party submit_code plugins still work."""
+        import uuid
+        from core_engine.contracts import Observation, SubmissionReceipt
+        result = self.submit_code(case.problem_id, case.code, case.lang)
+        observed = result.observation
+        if observed is None and result.judge_result is not None:
+            observed = Observation(kind='verdict', verdict=result.judge_result.status,
+                                   evidence=vars(result.judge_result))
+        if observed is None and (not result.success or not result.submit_id):
+            observed = Observation(kind='protocol_error', error_code='UNSTRUCTURED_SUBMISSION_FAILURE')
+        return SubmissionReceipt(result.submit_id or 'local-' + uuid.uuid4().hex, observed)
+
+    def get_result(self, submission_id):
+        from core_engine.contracts import Observation
+        result = self.get_judge_result(submission_id)
+        if result is None:
+            return None
+        return Observation(kind='verdict', verdict=result.status, evidence=vars(result))
+
+    def close(self):
+        """Adapters that own a client override this to release connections."""
 
     @abstractmethod
     def login(self, username: str, password: str) -> LoginResult:

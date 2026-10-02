@@ -60,3 +60,9 @@ class Observation:
 class AssertionResult:
     status: Literal['PASSED', 'FAILED', 'ERROR']
     reason: str
+
+
+@dataclass(frozen=True)
+class SubmissionReceipt:
+    submission_id: str
+    immediate_observation: Observation | None = None
