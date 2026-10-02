@@ -34,7 +34,7 @@ S11a 提供本地报告生成与证据门禁。S11b 工作流包含 Python 3.12/
 pytest、演示报告生成和证据门禁分别运行，失败不会被后续步骤覆盖；即使测试失败仍尝试生成并归档报告。
 Docker job 验证真实 HTTP 任务，再重建容器并核对同一任务和报告哈希，归档实际 HTML/JSON 与服务日志。
 
-真实 C++ E2E 作业已接入，远端真实判题运行结果仍待核验；不能仅凭工作流文件存在认定该层已验收。
+真实 C++ E2E 已完成远端运行及下载制品核验，结果与范围见下方验收记录。
 
 ## 首轮远端验收
 
@@ -66,3 +66,13 @@ Linux Python 3.12.14、3.14.7 各 304 条回归通过，Docker smoke 六条用�
 
 正常 main 在 [运行 37033319446](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033319446)
 恢复全绿，对应 `77ae90199a0bb8fc7b4eae7617e54df8b557aed2`；该次仍只有回归矩阵和 Docker Mock 作业。
+
+## 完整四作业验收
+
+[运行 37033913862](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033913862)
+对应 `f75c76e1e37d8a88136acf950f7946b06ebfb4aa`，Gitee/GitHub 阶段分支 SHA 一致。
+Python 3.12/3.14 各 307 条通过，Docker 六条用例和重建持久化通过，真实 C++ 的 32 条测试全部通过且无跳过。
+下载后核实 30 对 HTML/JSON、平台与 SUT SHA、两道题清理清单均一致，上传内容不含数据库或私有设置。
+32 个任务包括 28 COMPLETED、2 个预期登录失败的 FAILED 和 2 个取消测试的 CANCELLED；这不等于测试失败。
+原始制品下载保留在 `artifacts/ci-37033913862/`；较深路径在 Windows 上需短下载目录或长路径读取方式。
+GitHub 制品保留 14 天，本地副本与仓库内脱敏摘要共同保留溯源信息。

@@ -15,5 +15,5 @@
 | S08 Web | PASS (Windows/Mock/browser) | S08a 创建表单接通profile/seed/mode/workers、202 Location、配置失败重试及安全提示；实际浏览器创建顺序/并发并核对持久化，256测试通过。S08b安全文本、分页、完整详情、取消中状态、报告链接、重启历史及慢响应轮询均完成浏览器验证和独立复审 |
 | S09 Docker | PASS (Windows/Linux/HTTP Mock) | `59ee684` 已同步 main 和阶段分支并核对远端；两平台各271测试通过（1条上游警告）；非root镜像、版本门禁、6条HTTP任务、双报告下载、重启及down/up后同一任务和报告哈希不变，Linux锁与恢复回归通过。真实C++不在此结论内 |
 | S10 真实联调 | PASS (Windows→Linux real OJ) | 旧 C++ `cede96a` 的 MLE 误判已复现并保留证据；固定修复版 `fa5ffe3`，47条judge + 15条submit通过。平台293条非E2E及32条真实E2E通过：两题×两模式×五状态、批量HTTP重叠峰值3、会话隔离、规则/登录失败、取消前后提交集合一致。30对HTML/JSON报告、fixture及关联数据零残留通过；独立复审通过。GitHub运行仍属S11 |
-| S11 GitHub Actions | NOT_RUN | 已创建私有仓库 https://github.com/zhzgg123-pixel/oj-test-platform；main 已同步 S09，Actions 权限已启用；尚无工作流运行证据 |
-| S12 总体验收 | NOT_RUN | |
+| S11 GitHub Actions | PASS | `f75c76e`，run 37033913862 四作业全绿：Python3.12/3.14各307条，Docker持久化，真实C++32条；下载核验30对真实报告与fixture清理。独立故意失败run37032980025证实失败仍归档，恢复main的run37033319446全绿。详见 ci.md 和 evidence/index.json |
+| S12 总体验收 | IN_PROGRESS | 独立干净检出f75c76e、全新venv安装、pip check与307条回归通过；GitHub干净runner完成Docker及真实E2E。交付文档、逐项审计和标签待完成 |

@@ -969,6 +969,98 @@
         "artifacts/s11c-collector-red.txt",
         "artifacts/s11c-collected/collection.json"
       ]
+    },
+    {
+      "stage": "S11c-remote",
+      "status": "PASS",
+      "commit": "f75c76e1e37d8a88136acf950f7946b06ebfb4aa",
+      "run_url": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033913862",
+      "remote_ref": "origin/step/11-ci",
+      "remote_sha_verified": true,
+      "checks": {
+        "regression-python-3.12-f75c76e1e37d8a88136acf950f7946b06ebfb4aa": {
+          "status": "PASS",
+          "tests": 307,
+          "python": "3.12.14"
+        },
+        "regression-python-3.14-f75c76e1e37d8a88136acf950f7946b06ebfb4aa": {
+          "status": "PASS",
+          "tests": 307,
+          "python": "3.14.7"
+        },
+        "real_cpp": {
+          "status": "PASS",
+          "tests": 32,
+          "report_pairs": 30,
+          "task_states": {
+            "COMPLETED": 28,
+            "CANCELLED": 2,
+            "FAILED": 2
+          },
+          "sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+          "environment": {
+            "schema_version": 1,
+            "base_url": "http://127.0.0.1:18090",
+            "compose_project": "oj-platform-e2e",
+            "database": "oj_platform_e2e",
+            "sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+            "deployment_id": "1046de266f11ac4d214858943d0a08d6",
+            "services": {
+              "mysql": {
+                "container_id": "9366c34540d440c3407d78eeaf1433c1ac17651850da471edc7a9aace1887cb1",
+                "image_id": "sha256:e645fd9ffc4fc6745702d8c0068326b8707251166fdf11c80e8f52a609d19d1d",
+                "health": "healthy"
+              },
+              "cpp-oj": {
+                "container_id": "16c88a70fe23f53328caaf34daffb40b122136801f53a137e0053519b3bf5da0",
+                "image_id": "sha256:42ae406fb79b80857c42454a38095fb6324fe67c109da14da7b15339c8526b7a",
+                "health": "healthy"
+              },
+              "gateway": {
+                "container_id": "484671eaf69cf3c9af029a1340dc031d6f1d8aaed9c845230e0159c162f07f4e",
+                "image_id": "sha256:f0ba77f796e57c6fa89ae7f4fdad1665d6fcbd8e3f211535120542b337f9959e",
+                "health": "healthy"
+              }
+            },
+            "status": "PASS",
+            "scope": "infrastructure and authenticated API only; verdict matrix is a separate gate"
+          },
+          "fixtures_deleted": [
+            1,
+            2
+          ]
+        },
+        "docker": {
+          "status": "PASS",
+          "cases": 6,
+          "report_hashes_match": true
+        }
+      },
+      "artifacts": [
+        "artifacts/s11c-run.json",
+        "artifacts/s11c-artifact-acceptance.json",
+        "artifacts/ci-37033913862/"
+      ],
+      "limits": "Two FAILED tasks intentionally test invalid login; two CANCELLED tasks test cancellation. 32 JUnit cases pass without skips. Downloaded HTML content/identity verified; no visual-layout claim. Windows long-path prefix used for deep archive paths."
+    },
+    {
+      "stage": "S12-clean-install",
+      "status": "PASS",
+      "commit": "f75c76e1e37d8a88136acf950f7946b06ebfb4aa",
+      "checkout": ".cache/acceptance-f75c76e",
+      "checks": [
+        "Independent clone with no hardlinks; clean status and exact HEAD verified",
+        "Fresh Python 3.12 venv installed requirements-dev.lock; pip check exit 0",
+        "307 passed, 32 deselected, 1 upstream warning in clean local checkout",
+        "Fresh GitHub Linux checkouts: Python 3.12/3.14 each307, independent Docker smoke, real C++32 all passed in run37033913862"
+      ],
+      "artifacts": [
+        "artifacts/s12-clean-install.txt",
+        "artifacts/s12-clean-pip-check.txt",
+        "artifacts/s12-clean-unit.xml",
+        "artifacts/s12-clean-unit.txt"
+      ],
+      "limits": "S12 final documentation, requirement audit and release tag still pending."
     }
   ]
 }
