@@ -7,11 +7,12 @@ from typing import Optional
 from ..base_adapter import BaseOJAdapter, LoginResult, SubmitResult, JudgeResult
 from core_engine.api_client.request_client import RequestClient
 from core_engine.contracts import Observation, VERDICTS
+from core_engine.redaction import safe_evidence, EVIDENCE_FIELDS
 
 
 class LocalOJAdapter(BaseOJAdapter):
     BUSINESS_ERRORS = {'Problem not found': 'PROBLEM_NOT_FOUND', 'Code is required': 'CODE_REQUIRED'}
-    EVIDENCE_FIELDS = {'result', 'passed', 'total', 'time_ms', 'memory_kb', 'compile_error', 'detail', 'success', 'error'}
+    EVIDENCE_FIELDS = EVIDENCE_FIELDS
 
     def __init__(self, base_url: str, timeout: float = 30):
         super().__init__(base_url, timeout)
@@ -19,13 +20,7 @@ class LocalOJAdapter(BaseOJAdapter):
         self._secrets = set()
 
     def _safe_evidence(self, data):
-        def clean(value):
-            if isinstance(value, str):
-                for secret in sorted(self._secrets, key=len, reverse=True):
-                    value = value.replace(secret, '[REDACTED]')
-                return value
-            return value if value is None or type(value) in (int, float, bool) else '[INVALID_FIELD]'
-        return {key: clean(value) for key, value in data.items() if key in self.EVIDENCE_FIELDS}
+        return safe_evidence(data, self._secrets)
 
     def health_check(self) -> bool:
         try:

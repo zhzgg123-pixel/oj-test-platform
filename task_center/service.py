@@ -223,7 +223,10 @@ class TaskService:
         task = self.get(task_id)
         context = {key: getattr(task, key) for key in
                    ('id', 'name', 'profile', 'profile_sha256', 'platform_sha', 'sut_sha', 'created_at', 'started_at')}
-        info = ReportGenerator(directory).generate(self.task_result(task_id), task.config, task_context=context)
+        credentials = self._credentials.get(task_id)
+        secrets = (credentials.password.get_secret_value(),) if credentials is not None else ()
+        info = ReportGenerator(directory).generate(self.task_result(task_id), task.config,
+                                                   task_context=context, secrets=secrets)
         paths = [Path(info[f'{format}_path']).resolve() for format in ('json', 'html')]
         if any(not path.is_relative_to(directory) for path in paths):
             raise ValueError('generated report escapes task directory')

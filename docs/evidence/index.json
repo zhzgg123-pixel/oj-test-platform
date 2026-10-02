@@ -318,6 +318,27 @@
       "review": "Independent read-only review found no blockers; no independent test rerun.",
       "artifacts": [
         "artifacts/s07b-report-publication.xml"
+      ],
+      "commit": "42ce4ed0fd8c8b8192bf09d01f36f319fb44755f",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S07c",
+      "commit_locator": "fix: redact report diagnostics without corrupting evidence",
+      "environment": "Windows Python 3.12.10",
+      "red": "Report config exposed credential fields; known-secret redaction absent. Additional red tests reproduced short-secret hash/identifier corruption, filtered token echoed in diagnostics, and custom error-code distribution-key leak.",
+      "command": "python -m pytest -q --junitxml=artifacts/s07c-redaction.xml",
+      "exit_code": 0,
+      "passed": 250,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation"
+      ],
+      "scope": "7 redaction tests plus full regression: shared nested sensitive-field masking and known-value replacement, config and response allowlists, discovery before filtering, nonmutating source redaction marker, original hashes and validated verdicts preserved, distribution rebuilt from sanitized results. LocalOJ response and report paths share helper. Complete snapshot API and endpoint acceptance remain pending.",
+      "review": "Independent review confirmed diagnostic leak and canonical-field corruption; fixed with red/green tests. Follow-up distribution-key leak also fixed with a regression; final narrow rereview found no blockers.",
+      "artifacts": [
+        "artifacts/s07c-redaction.xml"
       ]
     }
   ]

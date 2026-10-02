@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 from core_engine.executor.base_executor import TaskResult
+from core_engine.redaction import redact, credential_values, safe_evidence
 
 logger = logging.getLogger("oj.report")
 
@@ -35,6 +36,7 @@ class ReportGenerator:
         task_result: TaskResult,
         task_config: Optional[dict] = None,
         *, task_context: Optional[dict] = None,
+        secrets=(),
     ) -> dict:
         """
         生成测试报告（JSON + HTML）
@@ -50,6 +52,40 @@ class ReportGenerator:
 
         data = self._build_data(report_id, task_result, task_config)
         data['task'] = task_context or {}
+        evidence_secrets = [secret for result in task_result.case_results if result.observation
+                            for secret in credential_values(result.observation.evidence)]
+        known_secrets = (*secrets, *evidence_secrets, *credential_values(task_config or {}), *credential_values(data))
+        clean = redact(data, known_secrets)
+        # Canonical identifiers, digests and enum verdicts are evidence, not secret
+        # text. A coincidentally equal short password must not corrupt their schema.
+        for key in ('report_id', 'generated_at'):
+            clean[key] = data[key]
+        for key in ('id', 'profile_sha256', 'platform_sha', 'sut_sha'):
+            if key in data['task']:
+                clean['task'][key] = data['task'][key]
+        for raw, sanitized in zip(data['all_cases'], clean['all_cases']):
+            sanitized['status'] = raw['status']
+            for key in ('source_sha256', 'profile_sha256'):
+                sanitized['input'][key] = raw['input'][key]
+            if raw['expectation'] is not None:
+                for key in ('kind', 'verdict', 'http_status'):
+                    sanitized['expectation'][key] = raw['expectation'][key]
+                if raw['expectation']['kind'] == 'verdict':
+                    sanitized['expected'] = raw['expected']
+            if raw['observation'] is not None:
+                for key in ('kind', 'verdict', 'http_status'):
+                    sanitized['observation'][key] = raw['observation'][key]
+                if raw['observation']['kind'] == 'verdict':
+                    sanitized['actual'] = raw['actual']
+            sanitized['input']['source_redacted'] = raw['input']['code'] != sanitized['input']['code']
+        clean['failed_cases'] = [case for raw, case in zip(data['all_cases'], clean['all_cases'])
+                                if raw['status'] != 'PASSED']
+        distribution = {}
+        for case in clean['all_cases']:
+            status = case['actual'] or case['status']
+            distribution[status] = distribution.get(status, 0) + 1
+        clean['summary']['status_distribution'] = distribution
+        data = clean
 
         json_path = self.output_dir / f"{report_id}.json"
         html_path = self.output_dir / f"{report_id}.html"
@@ -117,6 +153,8 @@ class ReportGenerator:
                     "observation": asdict(cr.observation) if cr.observation else None,
                 }
             all_cases.append(entry)
+            if entry['observation'] is not None:
+                entry['observation']['evidence'] = safe_evidence(entry['observation']['evidence'])
             if not cr.passed:
                 failed.append(entry)
 
@@ -135,7 +173,9 @@ class ReportGenerator:
                 "duration": tr.duration,
                 "status_distribution": dist,
             },
-            "config": config or {},
+            "config": {key: value for key, value in (config or {}).items() if key in {
+                'adapter_name', 'base_url', 'profile_id', 'problem_id', 'strategies', 'case_count',
+                'seed', 'mode', 'max_workers', 'request_timeout', 'poll_interval', 'poll_timeout'}},
             "failed_cases": failed,
             "all_cases": all_cases,
         }
