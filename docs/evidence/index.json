@@ -839,6 +839,41 @@
         "artifacts/s10b2-acceptance.json"
       ],
       "limits": "HTTP overlap is not server capacity evidence; cancellation stops new submissions but does not promise remote process termination. Two FAILED tasks are intentional invalid-login negative cases."
+    },
+    {
+      "stage": "S11a",
+      "status": "PASS",
+      "scope": "Local CI evidence tooling; remote Actions acceptance remains NOT_RUN",
+      "base_commit": "f1fa8f4cb82ab13f09d94611b421d85260d9c9fb",
+      "environment": "Windows, Python 3.12.10",
+      "checks": [
+        {
+          "command": "python -m pytest tests/unit/test_evidence_gate.py -q",
+          "result": "11 passed; initial missing-module red test recorded"
+        },
+        {
+          "command": "python -m pytest -m \"not e2e\" -q --junitxml=artifacts/s11a-unit.xml",
+          "exit_code": 0,
+          "passed": 304,
+          "deselected": 32,
+          "warnings": 1
+        },
+        {
+          "command": "python -m scripts.ci_demo / scripts.check_evidence (arguments in docs/ci.md)",
+          "exit_code": 0,
+          "result": "6 genuine HTTP Mock cases, HTML/JSON hashes and source identity validated"
+        }
+      ],
+      "review": "Independent read-only review found no blockers; both failure CLI entrypoints return 1 without creating output.",
+      "artifacts": [
+        "artifacts/s11a-gate-red.txt",
+        "artifacts/s11a-unit.xml",
+        "artifacts/s11a-unit.txt",
+        "artifacts/s11a-demo/manifest.json",
+        "artifacts/s11a-demo/report.html",
+        "artifacts/s11a-demo/report.json",
+        "artifacts/s11a-evidence.json"
+      ]
     }
   ]
 }
