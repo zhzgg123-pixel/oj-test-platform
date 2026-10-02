@@ -96,6 +96,26 @@
       "scope": "Validated models, selected config file, precedence and secret exclusion; Web/CLI wiring remains S03b",
       "artifacts": [
         "artifacts/s03a-config.xml"
+      ],
+      "commit": "f6b6b1e43b7b52114849653efd5d0041f5af79f1",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S03b",
+      "commit_locator": "fix: unify validated Web and CLI task entrypoints",
+      "environment": "Windows Python 3.12.10",
+      "red": "13 entrypoint failures; 5 builder silent-failure regressions; report download regression caught and restored",
+      "command": "python -m pytest -q --junitxml=artifacts/s03b-entrypoints.xml",
+      "exit_code": 0,
+      "passed": 144,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "HTTP API and subprocess CLI, invalid requests before network, file/env defaults, secret-free outputs, lifespan and reload, preserved report download",
+      "artifacts": [
+        "artifacts/s03b-entrypoints.xml"
       ]
     }
   ]

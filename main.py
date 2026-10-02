@@ -1,162 +1,98 @@
-"""
-OJ 自动化测试平台 - 启动入口
-
-用法:
-    python main.py                          # 启动 Web 服务 (默认 0.0.0.0:8000)
-    python main.py --port 9000              # 自定义端口
-    python main.py --host 127.0.0.1         # 自定义地址
-
-    python main.py --ci                     # CI 模式：不启动 Web 服务，直接运行测试
-    python main.py --ci --problem 2         # 指定题目 ID
-    python main.py --ci --strategies random boundary  # 指定策略
-    python main.py --ci --output report.json          # 输出到文件
-"""
-
-import os
-import sys
-import json
+"""Web and CLI entrypoints. Runtime resources are created only after validation."""
 import argparse
-
-# 确保项目根目录在 sys.path 中
-project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
-import uvicorn
-from backend.app import create_app
+import json
+import os
+from pathlib import Path
+import sys
+import uuid
 
 
-def main():
-    parser = argparse.ArgumentParser(description="OJ Test Platform")
-    parser.add_argument("--host", type=str, default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--config", type=str, default=None, help="配置文件路径")
-    parser.add_argument("--log-level", type=str, default="info")
-
-    # CI 模式参数
-    parser.add_argument("--ci", action="store_true", help="CI 模式：直接运行测试，不启动 Web 服务")
-    parser.add_argument("--problem", type=str, default="1", help="题目 ID")
-    parser.add_argument("--strategies", type=str, nargs="*",
-                        default=["random", "boundary", "rule"], help="测试策略")
-    parser.add_argument("--count", type=int, default=5, help="用例数量")
-    parser.add_argument("--base-url", type=str, default="http://localhost:8080", help="OJ 地址")
-    parser.add_argument("--username", type=str, default="admin", help="OJ 用户名")
-    parser.add_argument("--password", type=str, default="", help="OJ 密码")
-    parser.add_argument("--output", type=str, default=None, help="结果输出文件 (JSON)")
-
-    args = parser.parse_args()
-
-    if args.ci:
-        # ---- CI 模式：不启动 Web 服务，直接运行测试 ----
-        run_ci(args)
-    else:
-        # ---- Web 服务模式 ----
-        run_server(args)
+def cli_exit_code(summary):
+    return 0 if (summary.total > 0 and summary.passed == summary.total
+                 and summary.failed == 0 and summary.error == 0) else 1
 
 
-def run_ci(args: argparse.Namespace):
-    """CI 模式：命令行直接运行测试"""
-    from plugins.plugin_manager import PluginManager
+def parser():
+    result = argparse.ArgumentParser(description='OJ Test Platform')
+    result.add_argument('--host', default='127.0.0.1')
+    result.add_argument('--port', type=int, default=8000)
+    result.add_argument('--config')
+    result.add_argument('--log-level', default='info')
+    result.add_argument('--ci', action='store_true')
+    result.add_argument('--problem', '--problem-id', dest='problem_id')
+    result.add_argument('--profile', dest='profile_id')
+    result.add_argument('--strategies', nargs='*')
+    result.add_argument('--count', '--case-count', dest='case_count', type=int)
+    result.add_argument('--base-url')
+    result.add_argument('--adapter-name')
+    result.add_argument('--mode', choices=['sequential', 'concurrent'])
+    result.add_argument('--max-workers', type=int)
+    result.add_argument('--seed', type=int)
+    result.add_argument('--timeout', dest='request_timeout', type=float)
+    result.add_argument('--poll-interval', type=float)
+    result.add_argument('--poll-timeout', type=float)
+    result.add_argument('--username')
+    result.add_argument('--password', help=argparse.SUPPRESS)
+    result.add_argument('--output')
+    result.add_argument('--report-dir')
+    return result
+
+
+def run_ci(args):
+    from config_center.config import AppConfig
+    from config_center.models import TaskConfig, ExecutionCredentials
     from core_engine.executor.task_executor import TaskExecutor
     from core_engine.report_engine.report_generator import ReportGenerator
-
-    print(f"🧪 OJ Test Platform — CI Mode")
-    print(f"   OJ:     {args.base_url}")
-    print(f"   Problem: #{args.problem}")
-    print(f"   Strategies: {', '.join(args.strategies)}")
-    print(f"   Count:  {args.count}")
-    print()
-
-    # 初始化
-    pm = PluginManager()
-    executor = TaskExecutor()
-    report_gen = ReportGenerator()
-
-    # 执行
-    config = {
-        "plugin": "local_oj",
-        "base_url": args.base_url,
-        "problem_id": args.problem,
-        "strategies": args.strategies,
-        "case_count": args.count,
-        "login_required": True,
-        "username": args.username,
-        "password": args.password,
-    }
-
+    if args.password is not None:
+        print('Use OJ_PASSWORD environment variable; --password is no longer accepted.', file=sys.stderr)
+        return 2
     try:
-        result = executor.run_task(task_id="ci-run", config=config)
-        print(f"\n📊 执行结果:")
-        print(f"   {result.summary_line}")
-
-        # 生成报告
-        info = report_gen.generate(task_result=result, task_config=config)
-        print(f"\n📋 报告:")
-        print(f"   JSON: {info['json_path']}")
-        print(f"   HTML: {info['html_path']}")
-
-        # 输出到文件
+        overrides = {key: getattr(args, key, None) for key in TaskConfig.model_fields}
+        app_config = AppConfig.load(config_path=args.config, task_overrides=overrides)
+        config = app_config.task_config()
+        if config.mode != 'sequential':
+            raise ValueError('concurrent mode is not enabled until S06')
+        credentials = ExecutionCredentials(username=args.username or os.getenv('OJ_USERNAME', ''),
+                                             password=os.getenv('OJ_PASSWORD', ''))
+        executor = TaskExecutor()
+        if executor._plugin_manager.get_adapter(config.adapter_name) is None:
+            raise ValueError('unknown adapter')
+    except (ValueError, OSError) as exc:
+        print(f'Invalid configuration: {exc}', file=sys.stderr)
+        return 2
+    try:
+        task_id = 'ci-' + uuid.uuid4().hex
+        summary = executor.run_task(task_id, config, credentials)
+        report = ReportGenerator(output_dir=args.report_dir or app_config.test.report_dir).generate(
+            task_result=summary, task_config=config.to_dict())
+        result = {'total': summary.total, 'passed': summary.passed, 'failed': summary.failed,
+                  'error': summary.error, 'pass_rate': summary.pass_rate, 'duration': summary.duration}
         if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                json.dump({
-                    "ci_run": True,
-                    "config": config,
-                    "result": {
-                        "total": result.total,
-                        "passed": result.passed,
-                        "failed": result.failed,
-                        "error": result.error,
-                        "pass_rate": result.pass_rate,
-                        "duration": result.duration,
-                    },
-                    "reports": info,
-                }, f, ensure_ascii=False, indent=2)
-            print(f"   📄 结果已输出: {args.output}")
-
-        # CI 退出码：全部通过 → 0，有失败 → 1
-        if result.failed > 0 or result.error > 0:
-            print("\n❌ CI 检查未通过")
-            sys.exit(1)
-        else:
-            print("\n✅ CI 检查通过")
-
-    except Exception as e:
-        print(f"\n💥 执行失败: {e}", file=sys.stderr)
-        sys.exit(1)
+            Path(args.output).write_text(json.dumps({'ci_run': True, 'task_id': task_id,
+                'config': config.to_dict(), 'result': result, 'reports': report},
+                ensure_ascii=False, indent=2), encoding='utf-8')
+        status = cli_exit_code(summary)
+        print(json.dumps(result, ensure_ascii=False))
+        print('CI passed' if status == 0 else 'CI failed')
+        return status
+    except KeyboardInterrupt:
+        return 130
+    except Exception as exc:
+        print(f'Execution failed: {type(exc).__name__}', file=sys.stderr)
+        return 1
 
 
-def run_server(args: argparse.Namespace):
-    """Web 服务模式"""
-    app = create_app(config_path=args.config)
-
-    from fastapi.staticfiles import StaticFiles
-    frontend_dir = os.path.join(project_root, "frontend")
-    reports_dir = os.path.join(project_root, "reports")
-
-    if os.path.exists(frontend_dir):
-        app.mount("/frontend", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-
-    if os.path.exists(reports_dir):
-        app.mount("/reports", StaticFiles(directory=reports_dir), name="reports")
-
-    print(f"""
-╔══════════════════════════════════════════╗
-║     🧪 OJ 自动化测试平台已启动           ║
-║──────────────────────────────────────────║
-║  📊 前端:    http://localhost:{args.port}/frontend/index.html  ║
-║  📋 API:     http://localhost:{args.port}/docs                 ║
-║  🔌 插件:    local_oj                                    ║
-║  ⚙️  配置:    {args.config or 'config.yaml'}             ║
-╚══════════════════════════════════════════╝
-    """)
-
-    uvicorn.run(
-        app,
-        host=args.host,
-        port=args.port,
-        log_level=args.log_level,
-    )
+def run_server(args):
+    from backend.app import create_app
+    import uvicorn
+    uvicorn.run(create_app(config_path=args.config), host=args.host, port=args.port, log_level=args.log_level)
+    return 0
 
 
-if __name__ == "__main__":
-    main()
+def main(argv=None):
+    args = parser().parse_args(argv)
+    return run_ci(args) if args.ci else run_server(args)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

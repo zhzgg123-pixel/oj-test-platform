@@ -40,20 +40,20 @@ class CaseBuilder:
             排序后的测试用例列表
         """
         strategies = spec.get("strategies", ["random", "boundary", "rule"])
+        if not isinstance(strategies, list) or not strategies:
+            raise ValueError("at least one strategy is required")
+        count = spec.get("count", 5)
+        if type(count) is not int or not 1 <= count <= 1000:
+            raise ValueError("count must be an integer between 1 and 1000")
+        for name in strategies:
+            if name not in self._generators:
+                raise ValueError(f"unknown strategy: {name}")
         all_cases: list[TestCase] = []
-
         for strategy_name in strategies:
-            generator = self._generators.get(strategy_name)
-            if not generator:
-                print(f"[CaseBuilder] 未知策略: {strategy_name}，跳过")
-                continue
-
-            try:
-                cases = generator.generate(spec)
-                all_cases.extend(cases)
-                print(f"[CaseBuilder] '{strategy_name}' 生成 {len(cases)} 条用例")
-            except Exception as e:
-                print(f"[CaseBuilder] '{strategy_name}' 失败: {e}")
+            cases = self._generators[strategy_name].generate(spec)
+            if not cases:
+                raise ValueError(f"strategy generated no cases: {strategy_name}")
+            all_cases.extend(cases)
 
         # P0 → P1 → P2
         priority_order = {"P0": 0, "P1": 1, "P2": 2}

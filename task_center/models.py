@@ -28,53 +28,7 @@ class TaskStatus(str, Enum):
         return self.value
 
 
-@dataclass
-class TaskConfig:
-    """任务配置"""
-
-    # OJ 连接
-    adapter_name: str = "local_oj"
-    base_url: str = "http://localhost:8080"
-    username: str = ""
-    password: str = ""
-
-    # 用例生成
-    strategies: list[str] = field(default_factory=lambda: ["random", "boundary", "rule"])
-    problem_id: str = "1"
-    case_count: int = 5
-
-    # 执行
-    poll_interval: float = 1.0
-    poll_timeout: int = 60
-    timeout: int = 30
-
-    def to_dict(self) -> dict:
-        return {
-            "adapter_name": self.adapter_name,
-            "base_url": self.base_url,
-            "username": self.username,
-            "strategies": self.strategies,
-            "problem_id": self.problem_id,
-            "case_count": self.case_count,
-            "poll_interval": self.poll_interval,
-            "poll_timeout": self.poll_timeout,
-            "timeout": self.timeout,
-        }
-
-    def to_task_executor_config(self) -> dict:
-        """转为 TaskExecutor.run_task() 所需的 config 字典"""
-        return {
-            "plugin": self.adapter_name,
-            "base_url": self.base_url,
-            "username": self.username,
-            "password": self.password,
-            "problem_id": self.problem_id,
-            "strategies": self.strategies,
-            "case_count": self.case_count,
-            "poll_interval": self.poll_interval,
-            "poll_timeout": self.poll_timeout,
-            "timeout": self.timeout,
-        }
+from config_center.models import TaskConfig
 
 
 @dataclass

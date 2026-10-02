@@ -7,7 +7,7 @@ API:
 """
 
 from __future__ import annotations
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 
 from config_center.config import AppConfig
 
@@ -46,5 +46,12 @@ async def get_config(request: Request):
 @router.post("/reload")
 async def reload_config(request: Request):
     """重新加载配置"""
-    request.app.state.app_config = AppConfig.load()
+    try:
+        refreshed = AppConfig.load(config_path=request.app.state.config_path)
+    except (ValueError, OSError):
+        raise HTTPException(422, detail="Invalid configuration; active configuration retained") from None
+    # Existing task manager/report resources keep their startup destination until restart.
+    if refreshed.test.report_dir != request.app.state.app_config.test.report_dir:
+        raise HTTPException(409, detail="Changing report_dir requires application restart")
+    request.app.state.app_config = refreshed
     return {"status": "ok", "message": "配置已重新加载"}

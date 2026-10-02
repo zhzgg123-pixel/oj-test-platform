@@ -14,6 +14,8 @@ from __future__ import annotations
 import uuid
 import logging
 import threading
+import time
+from config_center.models import ExecutionCredentials
 from datetime import datetime
 from typing import Optional
 
@@ -29,11 +31,14 @@ class TaskManager:
 
     def __init__(self, report_dir: str = "reports"):
         self._tasks: dict[str, Task] = {}
+        self._credentials = {}
+        self._threads = []
+        self.closed = False
         self._lock = threading.Lock()
         self._executor = TaskExecutor()
         self._report_gen = ReportGenerator(output_dir=report_dir)
 
-    def create_task(self, config: TaskConfig | dict) -> Task:
+    def create_task(self, config: TaskConfig | dict, credentials=None, name=None) -> Task:
         """
         创建新任务
 
@@ -43,19 +48,22 @@ class TaskManager:
         Returns:
             Task: 创建的任务
         """
+        if self.closed:
+            raise RuntimeError("task manager is closed")
         if isinstance(config, dict):
             config = TaskConfig(**config)
 
         task_id = f"task-{uuid.uuid4().hex[:8]}"
         task = Task(
             id=task_id,
-            name=f"测试任务-{task_id[-6:]}",
+            name=name or f"测试任务-{task_id[-6:]}",
             config=config,
             status=TaskStatus.PENDING,
         )
 
         with self._lock:
             self._tasks[task_id] = task
+            self._credentials[task_id] = credentials or ExecutionCredentials()
 
         logger.info("[TaskManager] 任务已创建: %s", task_id)
         return task
@@ -72,7 +80,7 @@ class TaskManager:
         """
         with self._lock:
             task = self._tasks.get(task_id)
-            if not task or task.status != TaskStatus.PENDING:
+            if self.closed or not task or task.status != TaskStatus.PENDING:
                 return False
             task.status = TaskStatus.RUNNING
             task.started_at = datetime.now().isoformat()  # type: ignore
@@ -82,6 +90,7 @@ class TaskManager:
             args=(task_id,),
             daemon=True,
         )
+        self._threads.append(thread)
         thread.start()
         return True
 
@@ -130,7 +139,8 @@ class TaskManager:
             # 执行测试（TaskExecutor 内部完成 用例生成 + 执行）
             task_result = self._executor.run_task(
                 task_id=task_id,
-                config=task.config.to_task_executor_config(),
+                config=task.config,
+                credentials=self._credentials.get(task_id),
             )
 
             # 生成报告
@@ -182,3 +192,16 @@ class TaskManager:
                 task.status = TaskStatus.FAILED
                 task.error_message = str(e)
                 task.updated_at = datetime.now().isoformat()
+
+        finally:
+            with self._lock:
+                self._credentials.pop(task_id, None)
+
+    def close(self):
+        self.closed = True
+        deadline = time.monotonic() + 5
+        for thread in self._threads:
+            thread.join(timeout=max(0, deadline - time.monotonic()))
+        if any(thread.is_alive() for thread in self._threads):
+            raise RuntimeError('task shutdown deadline exceeded')
+        self._credentials.clear()

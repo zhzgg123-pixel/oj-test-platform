@@ -1,91 +1,72 @@
-"""
-任务管理路由
+"""Task routes: merge application defaults, then validate before scheduling."""
+from copy import deepcopy
 
-API:
-- POST   /api/tasks          — 创建并运行任务
-- POST   /api/tasks/generate — 仅生成用例，不执行
-- GET    /api/tasks           — 任务列表
-- GET    /api/tasks/{id}      — 任务详情
-- POST   /api/tasks/{id}/cancel — 取消任务
-- DELETE /api/tasks/{id}      — 删除任务
-"""
-
-from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import Field, SecretStr, ValidationError, create_model
 
-from task_center.models import TaskConfig
+from config_center.models import TaskConfig, ExecutionCredentials, ValidatedModel
 from core_engine.case_engine.case_builder import CaseBuilder
 
 router = APIRouter()
 
-
-class GenerateCasesRequest(BaseModel):
-    """仅生成用例请求"""
-    problem_id: str = "1"
-    strategies: list[str] = ["random", "boundary", "rule"]
-    case_count: int = 5
-
-
-class CreateTaskRequest(BaseModel):
-    """创建任务请求"""
-    name: str = "测试任务"
-    adapter_name: str = "local_oj"
-    base_url: str = "http://localhost:8080"
-    username: str = ""
-    password: str = ""
-    strategies: list[str] = ["random", "boundary", "rule"]
-    problem_id: str = "1"
-    case_count: int = 5
-    poll_interval: float = 1.0
-    poll_timeout: int = 60
+# Optional transport fields allow application defaults to participate before
+# cross-field validation. The authoritative validator remains TaskConfig.
+fields = {}
+for key, field in TaskConfig.model_fields.items():
+    optional = deepcopy(field)
+    optional.default = None
+    optional.default_factory = None
+    fields[key] = (field.annotation | None, optional)
+TaskOverrides = create_model('TaskOverrides', __base__=ValidatedModel, **fields)
 
 
-@router.post("/generate")
-async def generate_cases(req: GenerateCasesRequest):
-    """仅生成测试用例（不执行）"""
-    builder = CaseBuilder()
-    spec = {
-        "problem_id": req.problem_id,
-        "strategies": req.strategies,
-        "count": req.case_count,
-    }
-    cases = builder.build(spec)
-    return {
-        "total": len(cases),
-        "cases": [
-            {
-                "id": c.id,
-                "desc": c.desc,
-                "expected_status": c.expected_status,
-                "tags": c.tags,
-            }
-            for c in cases
-        ],
-    }
+class GenerateCasesRequest(TaskOverrides):
+    pass
 
 
-@router.post("")
+class CreateTaskRequest(TaskOverrides):
+    name: str = Field(default='测试任务', min_length=1, max_length=200)
+    username: str = ''
+    password: SecretStr = Field(default='', exclude=True, repr=False)
+
+
+def validated_config(req, request):
+    values = request.app.state.app_config.task_config().to_dict()
+    values.update(req.model_dump(exclude_unset=True, exclude_none=True,
+                                exclude={'name', 'username', 'password'}))
+    try:
+        config = TaskConfig.model_validate(values)
+    except ValidationError as exc:
+        raise HTTPException(422, detail=exc.errors(include_input=False, include_context=False, include_url=False)) from None
+    if config.mode != 'sequential':
+        raise HTTPException(422, detail='concurrent mode is not enabled until S06')
+    if request.app.state.plugin_manager.get_adapter(config.adapter_name) is None:
+        raise HTTPException(422, detail='unknown adapter')
+    return config
+
+
+@router.post('/generate')
+async def generate_cases(req: GenerateCasesRequest, request: Request):
+    config = validated_config(req, request)
+    try:
+        cases = CaseBuilder().build({'problem_id': config.problem_id,
+            'strategies': config.strategies, 'count': config.case_count, 'seed': config.seed})
+        if not cases:
+            raise ValueError('no executable cases generated')
+    except ValueError as exc:
+        raise HTTPException(422, detail=str(exc)) from None
+    return {'total': len(cases), 'cases': [
+        {'id': c.id, 'desc': c.desc, 'expected_status': c.expected_status, 'tags': c.tags} for c in cases]}
+
+
+@router.post('', status_code=202)
 async def create_task(req: CreateTaskRequest, request: Request):
-    """创建并运行任务"""
-    task_manager = request.app.state.task_manager
-
-    config = TaskConfig(
-        adapter_name=req.adapter_name,
-        base_url=req.base_url,
-        username=req.username,
-        password=req.password,
-        strategies=req.strategies,
-        problem_id=req.problem_id,
-        case_count=req.case_count,
-        poll_interval=req.poll_interval,
-        poll_timeout=req.poll_timeout,
-    )
-
-    task = task_manager.create_task(config=config)
-    task_manager.start_task(task.id)
-
-    return {"task_id": task.id, "status": task.status.value}
+    config = validated_config(req, request)
+    credentials = ExecutionCredentials(username=req.username, password=req.password)
+    manager = request.app.state.task_manager
+    task = manager.create_task(config=config, credentials=credentials, name=req.name)
+    manager.start_task(task.id)
+    return {'task_id': task.id, 'status': task.status.value}
 
 
 @router.get("")

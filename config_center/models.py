@@ -71,6 +71,10 @@ class TaskConfig(ValidatedModel):
     def to_dict(self):
         return self.model_dump(mode='json')
 
+    def to_task_executor_config(self):
+        """Compatibility method; credentials deliberately never enter this mapping."""
+        return self.to_dict()
+
 
 class ExecutionCredentials(ValidatedModel):
     username: str = ''
