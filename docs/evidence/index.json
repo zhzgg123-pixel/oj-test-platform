@@ -79,6 +79,23 @@
       "scope": "HTTP Mock contracts, LocalOJAdapter parsing, own-receipt results, strict Oracle, bounded retries; real C++ E2E still NOT_RUN",
       "artifacts": [
         "artifacts/s02b-adapter.xml"
+      ],
+      "commit": "661807422a2d0b9b461bda2a1d51f09d133db2f9",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S03a",
+      "commit_locator": "feat: validate task configuration and separate credentials",
+      "environment": "Windows Python 3.12.10",
+      "red": "26 configuration failures; additional regressions showed env label mismatch and legacy timeout alias precedence conflict",
+      "command": "python -m pytest -q --junitxml=artifacts/s03a-config.xml",
+      "exit_code": 0,
+      "passed": 122,
+      "failed": 0,
+      "scope": "Validated models, selected config file, precedence and secret exclusion; Web/CLI wiring remains S03b",
+      "artifacts": [
+        "artifacts/s03a-config.xml"
       ]
     }
   ]
