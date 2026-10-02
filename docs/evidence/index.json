@@ -581,6 +581,77 @@
         "artifacts/s10a-db-initial.json",
         "artifacts/s10a-e2e-gate.txt"
       ]
+    },
+    {
+      "stage": "S10b1",
+      "status": "PASS",
+      "scope": "Real two-profile fixture creation, readback and owned cleanup; verdict matrix still NOT_RUN",
+      "base_commit": "3f7d3596b319a3ec99b8c037994ed06976e377b1",
+      "tested_files_sha256": {
+        "scripts/e2e_fixtures.py": "d13dee22b2e3d6ab446ae26c7cd44075da552100dd27557ff98f9548f097b9ef",
+        "scripts/seed_e2e.py": "033d19166112e6a2225bc7495d9af9a034807249547e4c66707476119e9d5866",
+        "scripts/cleanup_e2e.py": "ef9fcce813f5df452b16310fd9d74e65852139b9dc27502bb72ee8bfd70549ea",
+        "tests/unit/test_e2e_fixtures.py": "ec40354c1998d7980baf3ec3d6a6c65d8e1be5e2f27b734c28192452dd059380"
+      },
+      "environment": "Windows, Python 3.12.10, pinned Linux C++ OJ + MySQL",
+      "tests": {
+        "passed": 292,
+        "failures": 0,
+        "errors": 0,
+        "warnings": 1
+      },
+      "commands": [
+        "python -m pytest tests/unit/test_e2e_fixtures.py -q (red collection before implementation; green afterwards)",
+        "python scripts/seed_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/s10b1-fixtures-a.json",
+        "python scripts/seed_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/s10b1-fixtures-b.json",
+        "python scripts/cleanup_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/s10b1-fixtures-a.json (twice)",
+        "python scripts/cleanup_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/s10b1-fixtures-b.json",
+        "python -m pytest -q --junitxml=artifacts/s10b1-tests.xml"
+      ],
+      "exit_codes": {
+        "seed_a": 0,
+        "seed_b": 0,
+        "cleanup_a": 0,
+        "repeat_cleanup_a": 0,
+        "cleanup_b": 0,
+        "pytest": 0
+      },
+      "runtime": {
+        "status": "PASS",
+        "scope": "real API and database fixture cleanup isolation",
+        "deleted_ids": [
+          1,
+          2
+        ],
+        "preserved_ids": [
+          3,
+          4
+        ],
+        "run_ids": [
+          "ff7faec1c464406fbb64b267dc3a2786",
+          "035218aac2f74c54841eecd47fa743b1"
+        ],
+        "sut_sha": "cede96af7ea62f07bc1fbc0c466658b771b57777",
+        "deployment_id": "be14baa93c51a32663b1e4d22a77c74a",
+        "final_cleanup": {
+          "problem_rows": 0,
+          "testcase_rows": 0,
+          "repeated_cleanup_a": "PASS",
+          "ledger_states": "all deleted"
+        }
+      },
+      "review": "Independent review found uncertain create could commit after cleanup and be falsely marked absent. Added failing delayed-commit test, preserve unresolved state with error, then green and rereview found no blockers.",
+      "artifacts": [
+        "artifacts/s10b1-tests.xml",
+        "artifacts/s10b1-tests.txt",
+        "artifacts/s10b-fixtures-red.txt",
+        "artifacts/s10b1-late-create-red.txt",
+        "artifacts/s10b1-fixture-isolation.json",
+        "artifacts/s10b1-fixtures-a-created.json",
+        "artifacts/s10b1-fixtures-b-created.json",
+        "artifacts/s10b1-fixtures-a.json",
+        "artifacts/s10b1-fixtures-b.json"
+      ]
     }
   ]
 }

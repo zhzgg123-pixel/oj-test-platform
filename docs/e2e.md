@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-S10a 建立固定源码、专用 MySQL、真实服务启动和登录检查。题目 seed、精确 cleanup、五种判题状态和并发矩阵将在 S10b 完成；基础设施健康不等于真实判题验收通过。
+S10a 建立固定源码、专用 MySQL、真实服务启动和登录检查。S10b1 提供两道题 seed 和精确 cleanup。五种判题状态和并发矩阵仍待 S10b2 完成；基础设施及数据准备通过不等于真实判题验收通过。
 
 被测仓库：`https://gitee.com/chasing-dreams-zhuo/cpp-oj.git`，固定提交 `cede96af7ea62f07bc1fbc0c466658b771b57777`。检出放在忽略的 `.cache/cpp-oj`；原桌面 C++ 源码不变。准备脚本拒绝错误远端、错误 SHA 或已有修改，不执行 reset、clean 或覆盖已有源码。
 
@@ -34,7 +34,23 @@ docker compose --env-file .env.e2e -f compose.e2e.yaml up -d --wait
 
 `e2e_environment.py` 在登录前校验容器项目/服务标签、健康状态、网络隔离、本机端口、镜像源码标签；再查询实际数据库名、部署标识、被测 SHA 和管理员存在性。最后使用本地随机凭据登录，检查 Cookie 和受保护的题目列表 API。输出仅包含脱敏身份信息，密码和 Cookie 不进入证据。
 
-后续 seed/cleanup 必须复用这一验证，并用清单追踪精确题目 ID 和内容，禁止对共享数据执行重置。真实 E2E 必须通过 `--run-e2e --e2e-config config_center/e2e.example.yaml` 显式启用；目前未添加判题用例时，零条 E2E 应失败而非通过。
+seed/cleanup 复用这一验证，并用清单追踪精确题目 ID 和内容，禁止对共享数据执行重置。真实 E2E 必须通过 `--run-e2e --e2e-config config_center/e2e.example.yaml` 显式启用；目前未添加判题用例时，零条 E2E 应失败而非通过。
+
+## 两道题的数据与清理
+
+```powershell
+.\.venv\Scripts\python.exe -X utf8 scripts/seed_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/e2e-fixtures.json
+# 使用清单里的真实 problem_id 运行判题测试；不得猜测固定题号。
+.\.venv\Scripts\python.exe -X utf8 scripts/cleanup_e2e.py --config config_center/e2e.example.yaml --ledger artifacts/e2e-fixtures.json
+```
+
+seed 使用当前 `a_plus_b` 和 `max_of_two` profile 的限制及全部 fixtures，第一组作为 sample，其余作为 testcases。创建前写入带随机 run_id 的清单，并记录 profile/hash、题目请求正文、环境身份和状态；题号取自创建响应，随后逐字段读回并核验内容哈希。上游接口不会可靠地报告附加 testcase 写入失败，因此不能只看 create 返回 success。
+
+清单已存在时 seed 拒绝重复创建；开始新运行必须使用新路径，旧清单保留作证据。两脚本以操作系统文件锁阻止同一清单的并行操作，清单更新采用临时文件替换。题目清理只删除清单内精确 ID；删除前验证当前部署与清单匹配、题目内容未变，删除后按 ID 和唯一标题读回确认不存在。再次 cleanup 会重新确认不存在，不重复删除；其他清单的题目保留。
+
+POST 超时或响应损坏时不自动重试创建。cleanup 可以按该次 run_id 唯一标题找回已创建但尚未记录 ID 的题目，并验证完整内容后清理。若暂时查不到、原创建请求仍可能在服务端执行，则报 `create outcome unresolved`，保留 `create_started` 状态；等待原请求完成后再执行 cleanup。若服务端从未创建，需要人工核实原请求终止，不能凭一次查空宣称清理完成。内容被修改、部分 testcase 缺失、标题歧义或部署变更都会拒绝删除，保留清单供调查，不调用全库 reset。
+
+本地验收分别创建两份清单，删除第一份后通过真实 API 和数据库确认第二份仍在，最后清理第二份并检查关联 testcase 不残留。故障时序单测只证明恢复逻辑，不替代真实判题结果。
 
 ## 停止与保留
 
