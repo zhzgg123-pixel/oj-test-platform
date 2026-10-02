@@ -1100,6 +1100,59 @@
         "docs/troubleshooting.md",
         "artifacts/s12-cli-doc/cli.txt"
       ]
+    },
+    {
+      "stage": "S12-release-acceptance",
+      "status": "PASS",
+      "commit": "a4571abb70794eb46c991c342a7f24e4486228e7",
+      "run_url": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37036285779",
+      "checks": {
+        "platform_sha": "a4571abb70794eb46c991c342a7f24e4486228e7",
+        "status": "PASS",
+        "python3.12": {
+          "executed": 307,
+          "runtime": "3.12.14",
+          "report_hashes": {
+            "json": "bd9c73181676941fcba624c5d48fbfa326d5b8d5750e626439d4d85c53ac89bf",
+            "html": "94a6a0605fec533c853f37ece1cc6dab34e89cb03f2f31637c09bf84e49c9dda"
+          }
+        },
+        "python3.14": {
+          "executed": 307,
+          "runtime": "3.14.7",
+          "report_hashes": {
+            "json": "99c979beaed6f3ff89dba194ad8ca5d7051b64c4a26197d37dd4f9316e0ff1d6",
+            "html": "245aab8282d9eba8fb19b36ea151ec015f906304ab06630bcbc1da568bccf624"
+          }
+        },
+        "real_cpp": {
+          "tests": 32,
+          "report_pairs": 30,
+          "task_states": {
+            "COMPLETED": 28,
+            "CANCELLED": 2,
+            "FAILED": 2
+          },
+          "sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+          "fixtures_deleted": [
+            1,
+            2
+          ]
+        },
+        "docker": {
+          "cases": 6,
+          "report_hashes": {
+            "json": "eb655be967aab66a8f6a2c4a91a5130310f7a3901025440246671c02e8877689",
+            "html": "e029658c492c00163ff0c6160a468a6a3443efd49f9837e9bd107dad3f5e9b65"
+          }
+        }
+      },
+      "review": "Independent scope/doc review passed; links, source paths and cited test nodes verified. CLI documentation smoke6 passed. Clean-install evidence recorded separately.",
+      "artifacts": [
+        "artifacts/r37036285779/",
+        "artifacts/s12-final-artifact-acceptance.json"
+      ],
+      "release_receipt": "Annotated v1.0.0 tag records final commit and its successful CI; create only after the final metadata commit passes CI. No release tag is inferred from this record alone."
     }
   ]
 }

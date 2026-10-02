@@ -5,7 +5,7 @@
 Python / FastAPI OJ 自动化测试平台：YAML 题目规则、三类用例策略、Web/CLI 共用任务服务、SQLite 历史、顺序/线程池并发和 HTML/JSON 报告。
 
 已验证：Windows 干净安装 307 条非 E2E 回归；GitHub Linux Python 3.12/3.14 各 307 条；Docker 重建持久化；固定真实 C++ OJ 的 32 条测试和 30 对报告。
-依据是 [完整 CI 运行](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033913862) 的提交 `f75c76e1e37d8a88136acf950f7946b06ebfb4aa`。
+依据是 [完整 CI 运行](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37036285779) 的提交 `a4571abb70794eb46c991c342a7f24e4486228e7`。
 [验收对照](docs/acceptance.md)区分 Mock、真实判题、浏览器和 CI；历史阶段记录见 [进度](docs/progress.md)。GitHub 为私有仓库，运行和制品需仓库访问权限。
 
 ## 1. 安装

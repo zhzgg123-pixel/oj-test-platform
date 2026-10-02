@@ -17,7 +17,7 @@ Web / CLI → TaskConfig → TaskService → ProfileLoader / CaseBuilder → SQL
 
 ## 已验证范围
 
-代码基线 `f75c76e1e37d8a88136acf950f7946b06ebfb4aa`：Windows 干净安装307条非E2E通过；Linux Python3.12/3.14各307条通过；真实C++32条通过并生成30对报告。
+代码基线 `a4571abb70794eb46c991c342a7f24e4486228e7`：Windows 干净安装307条非E2E通过；Linux Python3.12/3.14各307条通过；真实C++32条通过并生成30对报告。
 其中两个登录失败任务、两个取消任务是预期负向测试，JUnit 均通过。故意失败的独立CI分支证明测试失败时仍归档报告。
 浏览器创建、详情、取消、报告和重启历史的实际操作证据见 [manual-web-checks](docs/manual-web-checks.md)；不是单靠静态代码或API测试推断。
 
