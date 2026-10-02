@@ -20,13 +20,15 @@ import uuid
 class MockOJServer:
     SCENARIOS = {'all-verdicts', 'login-rejected', 'problem-not-found', 'malformed', 'slow', 'disconnect'}
 
-    def __init__(self, scenario='all-verdicts', delay=0.3):
+    def __init__(self, scenario='all-verdicts', delay=0.3, get_statuses=None, submit_status=200):
         if scenario not in self.SCENARIOS:
             raise ValueError(f'unknown Mock OJ scenario: {scenario}')
         if delay < 0:
             raise ValueError('delay must be non-negative')
         self.scenario = scenario
         self.delay = delay
+        self.get_statuses = list(get_statuses or [])
+        self.submit_status = submit_status
         self._lock = threading.Lock()
         self._release = threading.Event()
         self._release.set()
@@ -69,12 +71,14 @@ class MockOJServer:
             def log_message(self, *_):
                 pass  # No headers, credentials or arbitrary request text in stderr.
 
-            def reply(self, status, data, cookie=None, malformed=False):
+            def reply(self, status, data, cookie=None, malformed=False, location=None):
                 payload = b'{invalid json' if malformed else json.dumps(data).encode('utf-8')
                 try:
                     self.send_response(status)
                     self.send_header('Content-Type', 'application/json')
                     self.send_header('Content-Length', str(len(payload)))
+                    if location:
+                        self.send_header('Location', location)
                     if cookie:
                         self.send_header('Set-Cookie', f'session_id={cookie}; Path=/; HttpOnly')
                     self.end_headers()
@@ -111,6 +115,11 @@ class MockOJServer:
 
             def do_GET(self):
                 path, _ = self.record({})
+                with owner._lock:
+                    status = owner.get_statuses.pop(0) if owner.get_statuses else 200
+                if status != 200:
+                    self.reply(status, {'error': 'Injected HTTP failure'})
+                    return
                 if path in ('/', '/health'):
                     self.reply(200, {'status': 'ok', 'mock': True})
                 elif path == '/api/problems':
@@ -142,6 +151,10 @@ class MockOJServer:
                     return
                 if not authenticated:
                     self.reply(401, {'success': False, 'error': 'Not authenticated'})
+                    return
+                if owner.submit_status != 200:
+                    self.reply(owner.submit_status, {'error': 'Injected HTTP failure'},
+                               location='/api/submit/2' if owner.submit_status in {307, 308} else None)
                     return
                 code = fields.get('code', '')
                 if not code:

@@ -4,7 +4,7 @@
 核心能力：
 1. requests.Session 自动管理 Cookie
 2. 统一超时控制
-3. 自动重试（5xx / 超时）
+3. 仅 GET 对指定瞬时错误有限重试；POST 不自动重发
 4. 全链路请求/响应日志
 5. 统一的异常处理
 """
@@ -42,72 +42,36 @@ class RequestClient:
         return self.request("POST", path, data=data, json=json, **kwargs)
 
     def request(self, method: str, path: str, **kwargs) -> requests.Response:
+        """Retry only safe GET requests; preserve the final HTTP response for the adapter.
+
+        retry_count is the total GET attempt count, bounded to three. A POST may
+        already have been accepted when its response is lost, so it is sent once.
         """
-        统一请求入口，含重试与日志
-
-        Args:
-            method: HTTP 方法
-            path: API 路径（如 /api/login）
-            **kwargs: 传给 requests 的参数
-
-        Returns:
-            requests.Response
-
-        Raises:
-            ConnectionError: 所有重试耗尽后仍连接失败
-            RuntimeError: 所有重试耗尽后仍返回 5xx
-        """
+        method = method.upper()
         url = urljoin(self.base_url, path)
         kwargs.setdefault("timeout", self.timeout)
-        last_exception = None
-
-        for attempt in range(1, self.retry_count + 1):
+        if method != "GET":
+            # A 307/308 redirect can replay a POST too; return it for explicit handling.
+            kwargs["allow_redirects"] = False
+        attempts = min(3, max(1, self.retry_count)) if method == "GET" else 1
+        for attempt in range(1, attempts + 1):
             try:
-                start = time.time()
                 response = self._session.request(method, url, **kwargs)
-                elapsed = time.time() - start
-
-                logger.debug(
-                    "[HTTP] %s %s → %d (%.3fs) [%d/%d]",
-                    method, url, response.status_code, elapsed,
-                    attempt, self.retry_count,
-                )
-
-                # 非 5xx 错误直接返回
-                if response.status_code < 500:
-                    return response
-
-                # 5xx 重试
-                logger.warning(
-                    "[HTTP] %s %s → %d, 重试中... [%d/%d]",
-                    method, url, response.status_code, attempt, self.retry_count,
-                )
-
-            except requests.Timeout as e:
-                last_exception = e
-                logger.warning(
-                    "[HTTP] %s %s 超时 (%.1fs), 重试中... [%d/%d]",
-                    method, url, self.timeout, attempt, self.retry_count,
-                )
-            except requests.ConnectionError as e:
-                last_exception = e
-                logger.error(
-                    "[HTTP] %s %s 连接失败: %s [%d/%d]",
-                    method, url, str(e), attempt, self.retry_count,
-                )
-                if attempt == self.retry_count:
+            except (requests.Timeout, requests.ConnectionError):
+                if attempt == attempts:
                     raise
+                logger.warning("GET transport failure; retry %d/%d", attempt, attempts)
+            else:
+                if response.status_code not in {502, 503, 504} or attempt == attempts:
+                    return response
+                response.close()
+                logger.warning("GET transient HTTP failure; retry %d/%d", attempt, attempts)
+            time.sleep(self.retry_delay * attempt)
+        raise AssertionError("unreachable request retry state")
 
-            # 退避等待
-            if attempt < self.retry_count:
-                time.sleep(self.retry_delay * attempt)
-
-        # 所有重试耗尽
-        if last_exception:
-            raise last_exception  # type: ignore
-
-        # 所有重试后仍是 5xx
-        raise RuntimeError(f"[HTTP] 请求失败（重试耗尽）: {method} {url}")
+    def close(self) -> None:
+        """Release this client's connection pool."""
+        self._session.close()
 
     def get_session_id(self) -> Optional[str]:
         """获取当前 Session ID"""

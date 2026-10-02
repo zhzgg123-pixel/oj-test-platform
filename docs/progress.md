@@ -6,7 +6,7 @@
 |---|---|---|
 | S00 基线 | PASS | `4afe3ddf8f39329bcf2070014524cbbba59058b9` 已推送 origin/main 并核对远端；来源哈希、compileall、pip check 通过 |
 | S01 测试底座 | PASS | `2e0129c` 已推送 main 与阶段分支并核对远端； 15 条测试通过；HTTP Mock、5类结果读取、故障注入、Cookie、并发屏障、清理、E2E 门禁；干净环境锁文件安装与测试通过 |
-| S02 判定与协议 | IN_PROGRESS | S02a 统一 Oracle 与明确预期已完成，63 测试通过；S02b Adapter 解析、请求重试、同步结果隔离尚未完成 |
+| S02 判定与协议 | IN_PROGRESS | S02a 统一 Oracle 与明确预期已完成，63 测试通过；请求重试边界已修复，73 测试通过；Adapter 解析和同步结果隔离尚未完成 |
 | S03 配置与入口 | NOT_RUN | |
 | S04 YAML 题目 | NOT_RUN | |
 | S05 SQLite | NOT_RUN | |

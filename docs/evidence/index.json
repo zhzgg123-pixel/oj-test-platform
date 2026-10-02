@@ -45,6 +45,23 @@
       "scope": "Oracle, typed expectation/observation validation, sequential execution integration; Adapter response parsing and retry policy remain S02b",
       "artifacts": [
         "artifacts/s02a.xml"
+      ],
+      "commit": "5f716238533946934772c9bc6d49903d84e4f4b4",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S02b-retries",
+      "commit_locator": "fix: prevent automatic submission replay",
+      "environment": "Windows Python 3.12.10",
+      "red": "5 failures: POST timeout/disconnect sent 3 requests; POST 503 retried; GET 500 retried; final 503 lost",
+      "command": "python -m pytest -q --junitxml=artifacts/s02b-retries.xml",
+      "exit_code": 0,
+      "passed": 73,
+      "failed": 0,
+      "scope": "Real HTTP request counts, GET bounded transient retries, POST single attempt including 307/308",
+      "artifacts": [
+        "artifacts/s02b-retries.xml"
       ]
     }
   ]
