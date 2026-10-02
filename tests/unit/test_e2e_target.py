@@ -1,11 +1,12 @@
 import pytest
 from scripts.e2e_environment import validate_config, validate_scope, validate_network_membership
+from scripts.prepare_e2e import SUT_SHA
 
 
 def config():
     return {'schema_version': 1, 'base_url': 'http://127.0.0.1:18090',
             'compose_project': 'oj-platform-e2e', 'database': 'oj_platform_e2e',
-            'sut_sha': 'cede96af7ea62f07bc1fbc0c466658b771b57777'}
+            'sut_sha': SUT_SHA}
 
 
 def test_network_boundary_keeps_sut_and_database_internal():

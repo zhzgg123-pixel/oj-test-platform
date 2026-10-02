@@ -21,7 +21,7 @@
 - 同一数据库只允许一个执行进程持有操作系统文件锁；Web 默认一个 Uvicorn worker。
 - 一个平台进程最多一个 RUNNING 任务，内存等待队列上限 20；每个任务最多 16 个 worker。
 - 密码、令牌、Cookie 不入库、不进报告、不提交 Git；请求 POST 不透明自动重试。
-- 真实联调独立检出 C++ `cede96af7ea62f07bc1fbc0c466658b771b57777`，不直接更新原目录。
+- 真实联调基线为 C++ `cede96af7ea62f07bc1fbc0c466658b771b57777`；真实测试发现资源误判后，修复版固定为 `fa5ffe317f136f29039bc66e734fc687c4531e10`，独立检出，不直接更新原目录。
 - 每步完成“复现／红测 → 实现 → 绿测 → 审查差异 → 提交 → 推送 → 远端读回”。不以文件存在代替运行成功。
 
 ## 0. 实施总览
@@ -405,7 +405,7 @@ docker compose logs --no-color platform
 
 **文件**：新增 `infra/cpp-oj.Dockerfile`、`compose.e2e.yaml`、`scripts/prepare_sut.ps1`、`scripts/seed_e2e.py`、`scripts/cleanup_e2e.py`、`tests/e2e/test_real_oj.py`、`docs/e2e.md`、`config_center/e2e.example.yaml`。
 
-**接口**：`prepare_sut.ps1` 将固定提交下载到忽略目录 `.cache/cpp-oj` 并核验 HEAD；Compose 使用该内容构建 Linux C++ 服务及专用 MySQL。seed 输出 `artifacts/e2e-fixtures.json`，含 run_id、精确题目 ID、profile 对应关系和内容哈希；cleanup 只清除此清单创建的数据。
+**接口**：`prepare_sut.ps1` 将固定提交下载到忽略目录 `.cache/cpp-oj-<完整SHA>` 并核验 HEAD；Compose 使用该内容构建 Linux C++ 服务及按部署 ID 分离数据卷的专用 MySQL。seed 输出 `artifacts/e2e-fixtures.json`，含 run_id、精确题目 ID、profile 对应关系和内容哈希；cleanup 只清除此清单创建的数据。
 
 - [ ] 检查固定提交的源码、构建依赖、登录协议、判题字段、MySQL schema 及测试数据格式；根据事实编写镜像。已有文档可能过时，不能以 HTTP 200 推断服务正确。
 - [ ] 写 E2E 参数矩阵；此时用缺少目标配置的显式 e2e 运行验证门禁确实失败，不将它算作产品缺陷。

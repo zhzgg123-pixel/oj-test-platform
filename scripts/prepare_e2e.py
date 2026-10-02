@@ -8,7 +8,7 @@ import secrets
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-SUT_SHA = 'cede96af7ea62f07bc1fbc0c466658b771b57777'
+SUT_SHA = 'fa5ffe317f136f29039bc66e734fc687c4531e10'
 SUT_URL = 'https://gitee.com/chasing-dreams-zhuo/cpp-oj.git'
 
 
@@ -31,7 +31,7 @@ def render_schema(source, sha, deployment_id):
 
 
 def prepare():
-    source = ROOT / '.cache' / 'cpp-oj'
+    source = ROOT / '.cache' / ('cpp-oj-' + SUT_SHA)
     if not source.exists():
         source.parent.mkdir(parents=True, exist_ok=True)
         git('clone', '--no-checkout', SUT_URL, str(source))

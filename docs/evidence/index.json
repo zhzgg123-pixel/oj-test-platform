@@ -696,6 +696,149 @@
         "Run full real verdict matrix, batch concurrency, auth and cancellation boundaries",
         "Complete S11 actual GitHub Actions and S12 acceptance"
       ]
+    },
+    {
+      "stage": "S10b2",
+      "status": "PASS",
+      "scope": "Local Windows platform against isolated Linux real C++ OJ; GitHub execution remains S11",
+      "base_commit": "5a97ebc8a1892413194a9a50940151839365cee9",
+      "tested_files_sha256": {
+        "scripts/prepare_e2e.py": "f9ca4f650deaa5d1d57887a339bf9e96901023a7625a5ffd38956f9d5226e508",
+        "scripts/e2e_environment.py": "3624147694469a561d39d15b111a9e4a280b9198b9fb2c8eadb29ed1c7f0c87c",
+        "compose.e2e.yaml": "6aeb2c8487be02cdb856e6ea2489d9ca67ba5730db13ddd0334f29c5e4a247f2",
+        "config_center/e2e.example.yaml": "31d4c17719859b6287c6f54a6aa4c87c6bad54fed294d995501f0fdf7009d43d",
+        "tests/e2e/conftest.py": "b70a769fb1070d1f5d894745afc24c7d5d152899e8989205bb0c387dc199a4c9",
+        "tests/e2e/test_real_oj.py": "ce3510a1f905ab7aca7b39c040a4de7e12447165b0257b6ce715418d70dc0cbd",
+        "tests/unit/test_e2e_bootstrap.py": "173e029503b12c85221bab1c1e64c707f816892d8d2b8bb0d07715c927c32910",
+        "tests/unit/test_e2e_target.py": "caba59a5549949795c9cacd3c0fc02b7eb0bbfb902be12466206766839ff7b4b"
+      },
+      "sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+      "tests": {
+        "non_e2e_passed": 293,
+        "e2e_passed": 32,
+        "warnings": 1
+      },
+      "commands": [
+        "python scripts/prepare_e2e.py",
+        "docker compose --env-file .env.e2e -f compose.e2e.yaml build --build-arg DEBIAN_MIRROR=mirror.sjtu.edu.cn",
+        "docker compose --env-file .env.e2e -f compose.e2e.yaml up -d --wait",
+        "python scripts/e2e_environment.py --evidence artifacts/s10b2-fixed-environment.json",
+        "python -m pytest -q --junitxml=artifacts/s10b2-unit.xml",
+        "python -m pytest tests/e2e --run-e2e --e2e-config config_center/e2e.example.yaml -q --junitxml=artifacts/s10b2-fixed-e2e.xml"
+      ],
+      "exit_codes": {
+        "prepare": 0,
+        "build": 0,
+        "start": 0,
+        "environment": 0,
+        "non_e2e": 0,
+        "e2e": 0,
+        "final_fixture_db_readback": 0
+      },
+      "acceptance": {
+        "status": "PASS",
+        "run_directory": "artifacts/e2e/5ac69bc9522c4f008f9d93093b69077a",
+        "sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+        "deployment_id": "ee3c11b39785ddb50e971ac77eefc744",
+        "cases": 32,
+        "matrix_cases": 20,
+        "task_states": {
+          "COMPLETED": 28,
+          "FAILED": 2,
+          "CANCELLED": 2
+        },
+        "report_pairs": 30,
+        "http_overlap": [
+          {
+            "nodeid": "tests/e2e/test_real_oj.py::test_real_batch_results_and_http_overlap[concurrent-a_plus_b]",
+            "peak_http_calls": 3,
+            "requests": 5
+          },
+          {
+            "nodeid": "tests/e2e/test_real_oj.py::test_real_batch_results_and_http_overlap[concurrent-max_of_two]",
+            "peak_http_calls": 3,
+            "requests": 5
+          },
+          {
+            "nodeid": "tests/e2e/test_real_oj.py::test_real_batch_results_and_http_overlap[sequential-a_plus_b]",
+            "peak_http_calls": 1,
+            "requests": 5
+          },
+          {
+            "nodeid": "tests/e2e/test_real_oj.py::test_real_batch_results_and_http_overlap[sequential-max_of_two]",
+            "peak_http_calls": 1,
+            "requests": 5
+          }
+        ],
+        "cancellation": [
+          {
+            "task_id": "418e429f-fbe1-4185-9769-496fa34401e2",
+            "mode": "concurrent",
+            "before_cancel": [
+              [
+                "2f221799dc6c4e998f6d94a83bbf8449",
+                3308.437
+              ],
+              [
+                "82430cdc72f748d9a2db6586708f57fc",
+                3308.468
+              ],
+              [
+                "da535f7bfb7246098c2ce328a768d51b",
+                3308.468
+              ]
+            ],
+            "after_complete": [
+              [
+                "2f221799dc6c4e998f6d94a83bbf8449",
+                3308.437
+              ],
+              [
+                "82430cdc72f748d9a2db6586708f57fc",
+                3308.468
+              ],
+              [
+                "da535f7bfb7246098c2ce328a768d51b",
+                3308.468
+              ]
+            ]
+          },
+          {
+            "task_id": "98833fee-9aab-4959-aff5-e0194312ef40",
+            "mode": "sequential",
+            "before_cancel": [
+              [
+                "c76401c654234ad7abc18760b4cdfce3",
+                3305.703
+              ]
+            ],
+            "after_complete": [
+              [
+                "c76401c654234ad7abc18760b4cdfce3",
+                3305.703
+              ]
+            ]
+          }
+        ],
+        "fixture_ids": [
+          5,
+          6
+        ],
+        "remaining_problem_rows": 0,
+        "remaining_testcase_rows": 0,
+        "credential_scan": "PASS"
+      },
+      "review": "No remaining blockers after strengthening cancellation to compare the full initial in-flight submission set before/after cancellation. Windows test artifact paths shortened; complete node names retained separately.",
+      "migration": "Old checkout, private settings/prepared schema backup and original MySQL volume retained. Fixed SHA has separate checkout; new deployment identity uses new MySQL volume. No old scope marker was rewritten.",
+      "artifacts": [
+        "artifacts/s10b2-unit.xml",
+        "artifacts/s10b2-fixed-e2e.xml",
+        "artifacts/s10b2-fixed-e2e.txt",
+        "artifacts/s10b2-fixed-build.txt",
+        "artifacts/s10b2-fixed-environment.json",
+        "artifacts/s10b2-acceptance.json"
+      ],
+      "limits": "HTTP overlap is not server capacity evidence; cancellation stops new submissions but does not promise remote process termination. Two FAILED tasks are intentional invalid-login negative cases."
     }
   ]
 }

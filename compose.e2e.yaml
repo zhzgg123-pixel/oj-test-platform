@@ -24,7 +24,7 @@ services:
       context: .
       dockerfile: infra/cpp-oj.Dockerfile
       additional_contexts:
-        sut: ./.cache/cpp-oj
+        sut: ./.cache/cpp-oj-${E2E_SUT_SHA}
       args:
         SUT_SHA: ${E2E_SUT_SHA:?Missing pinned source revision}
     environment:
@@ -72,6 +72,7 @@ services:
       retries: 20
 volumes:
   e2e-mysql:
+    name: oj-platform-e2e-mysql-${E2E_DEPLOYMENT_ID:?Missing isolated deployment identity}
 networks:
   e2e:
     internal: true

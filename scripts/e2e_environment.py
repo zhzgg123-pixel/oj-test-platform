@@ -118,7 +118,7 @@ def verify_environment(config_path):
         if response.status_code != 200 or response.json().get('success') is not True:
             raise ValueError('authenticated real OJ API failed')
     return {**config, 'deployment_id':settings['E2E_DEPLOYMENT_ID'], 'services':instances,
-            'status':'PASS', 'scope':'infrastructure and authenticated API only; verdict matrix not yet run'}
+            'status':'PASS', 'scope':'infrastructure and authenticated API only; verdict matrix is a separate gate'}
 
 
 def main():
