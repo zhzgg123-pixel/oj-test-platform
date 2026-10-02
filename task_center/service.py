@@ -220,7 +220,10 @@ class TaskService:
         directory = (self.report_root / task_id).resolve()
         if not directory.is_relative_to(self.report_root):
             raise ValueError('report path escapes report root')
-        info = ReportGenerator(directory).generate(self.task_result(task_id), self.get(task_id).config)
+        task = self.get(task_id)
+        context = {key: getattr(task, key) for key in
+                   ('id', 'name', 'profile', 'profile_sha256', 'platform_sha', 'sut_sha', 'created_at', 'started_at')}
+        info = ReportGenerator(directory).generate(self.task_result(task_id), task.config, task_context=context)
         for format in ('json', 'html'):
             path = Path(info[f'{format}_path']).resolve()
             self.repo.save_report(task_id, format, path.relative_to(self.report_root).as_posix(),

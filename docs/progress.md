@@ -11,7 +11,7 @@
 | S04 YAML 题目 | PASS | `47294ab` 已同步并核对远端；S04b 两题配置、三类策略、精确总数、seed／源码哈希、匿名会话隔离、Web／CLI 接通；171 测试通过（1 条上游弃用提示）。HTTP Mock 不证明真实 C++ 判题 |
 | S05 SQLite | PASS (Windows/Mock) | 四表、输入快照、结果幂等、运行锁、重启恢复、队列20、Web／CLI共用服务、历史／源码／报告API、旧入口兼容、schema v1→v2保留历史；214 测试通过（1 条上游弃用提示）。独立审查发现的时间字符串／报告大小兼容问题已修复并复测。POSIX 锁待 S09／S11 |
 | S06 并发与取消 | PASS (Windows/Mock) | S06a 有界future、逐用例独立会话和公开入口；S06b取消屏障、在途结果保留、取消元数据、报告终态一致性、关闭期限及CLI KeyboardInterrupt退出130；235测试通过（1条上游弃用提示）。不证明远端进程终止或真实控制台信号 |
-| S07 报告 | NOT_RUN | |
+| S07 报告 | IN_PROGRESS | S07a 报告输入、结构化差异、任务/profile/版本上下文、HTML转义、UUID防覆盖；240测试通过。旧非法预期报告回归已修复并复审。统一脱敏和原子发布待后续 |
 | S08 Web | NOT_RUN | |
 | S09 Docker | NOT_RUN | |
 | S10 真实联调 | NOT_RUN | |

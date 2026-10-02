@@ -11,11 +11,14 @@ from __future__ import annotations
 import json
 import os
 import logging
+from dataclasses import asdict
+from html import escape
+from uuid import uuid4
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from core_engine.executor.base_executor import TaskResult, CaseResult
+from core_engine.executor.base_executor import TaskResult
 
 logger = logging.getLogger("oj.report")
 
@@ -31,6 +34,7 @@ class ReportGenerator:
         self,
         task_result: TaskResult,
         task_config: Optional[dict] = None,
+        *, task_context: Optional[dict] = None,
     ) -> dict:
         """
         生成测试报告（JSON + HTML）
@@ -42,10 +46,10 @@ class ReportGenerator:
         Returns:
             dict: {"report_id", "json_path", "html_path", "summary"}
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_id = f"report_{timestamp}"
+        report_id = f"report_{uuid4()}"
 
         data = self._build_data(report_id, task_result, task_config)
+        data['task'] = task_context or {}
 
         # JSON 报告
         json_path = self.output_dir / f"{report_id}.json"
@@ -77,20 +81,35 @@ class ReportGenerator:
         # 状态分布统计
         dist: dict[str, int] = {}
         failed = []
+        all_cases = []
         for cr in tr.case_results:
             s = cr.actual_status or cr.status
             dist[s] = dist.get(s, 0) + 1
-            if not cr.passed:
-                failed.append({
+            entry = {
+                    "id": cr.case.id,
                     "case_id": cr.case.id,
                     "desc": cr.case.desc,
                     "expected": cr.case.expected_status,
                     "actual": cr.actual_status,
                     "error": cr.error_message,
-                })
+                    "status": cr.status,
+                    "duration": cr.duration,
+                    "attempt_count": cr.attempt_count,
+                    "started_at": cr.start_time,
+                    "finished_at": cr.end_time,
+                    "input": {key: getattr(cr.case, key) for key in
+                              ('problem_id', 'code', 'lang', 'strategy', 'profile_id',
+                               'profile_sha256', 'source_sha256', 'seed', 'auth_mode', 'request_overrides')},
+                    "expectation": asdict(cr.case.expectation) if cr.case.expectation else None,
+                    "observation": asdict(cr.observation) if cr.observation else None,
+                }
+            all_cases.append(entry)
+            if not cr.passed:
+                failed.append(entry)
 
         return {
             "report_id": report_id,
+            "schema_version": 2,
             "generated_at": datetime.now().isoformat(),
             "remote_execution_may_continue": tr.remote_execution_may_continue,
             "summary": {
@@ -105,17 +124,7 @@ class ReportGenerator:
             },
             "config": config or {},
             "failed_cases": failed,
-            "all_cases": [
-                {
-                    "id": cr.case.id,
-                    "desc": cr.case.desc,
-                    "expected": cr.case.expected_status,
-                    "actual": cr.actual_status,
-                    "status": cr.status,
-                    "duration": cr.duration,
-                }
-                for cr in tr.case_results
-            ],
+            "all_cases": all_cases,
         }
 
     @staticmethod
@@ -126,19 +135,23 @@ class ReportGenerator:
                              if data.get("remote_execution_may_continue") else "")
         rows = ""
         for cr in data["all_cases"]:
+            text = {key: escape(str(value), quote=True) for key, value in cr.items()}
             icon = (
                 "✅" if cr["status"] == "PASSED"
                 else "❌" if cr["status"] == "FAILED"
                 else "⚠️"
             )
             rows += (
-                f"<tr><td>{cr['id']}</td>"
-                f"<td>{cr['desc']}</td>"
-                f"<td>{cr['expected']}</td>"
-                f"<td>{cr['actual']}</td>"
-                f"<td>{icon} {cr['status']}</td>"
-                f"<td>{cr['duration']}s</td></tr>"
+                f"<tr><td>{text['id']}</td>"
+                f"<td>{text['desc']}</td>"
+                f"<td>{text['expected']}</td>"
+                f"<td>{text['actual']}</td>"
+                f"<td>{icon} {text['status']}</td>"
+                f"<td>{text['duration']}s</td></tr>"
             )
+            evidence = escape(json.dumps(cr, ensure_ascii=False, indent=2), quote=True)
+            rows += f'<tr><td colspan="6"><details><summary>输入、预期、实际与错误</summary><pre>{evidence}</pre></details></td></tr>'
+        context = escape(json.dumps({'task': data.get('task', {}), 'config': data['config']}, ensure_ascii=False, indent=2), quote=True)
 
         return f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>OJ 测试报告</title>
 <style>
@@ -157,6 +170,7 @@ table {{width:100%;border-collapse:collapse;margin-top:16px;}}
 th,td {{padding:10px 12px;border-bottom:1px solid #eee;text-align:left;}}
 th {{background:#fafafa;font-weight:600;color:#555;}}
 tr:hover {{background:#f8f9fa;}}
+pre {{white-space:pre-wrap;overflow-wrap:anywhere;}}
 </style></head><body><div class="container">
 <h1>🔍 OJ 测试报告</h1>
 <p>{cancellation_note}</p>
@@ -170,6 +184,7 @@ tr:hover {{background:#f8f9fa;}}
 <div class="stat cancelled"><div class="number">{s.get('cancelled', 0)}</div><div class="label">取消</div></div>
 </div>
 <p>耗时: {s['duration']}s</p>
+<details><summary>任务配置和版本</summary><pre>{context}</pre></details>
 <table><thead><tr><th>用例ID</th><th>描述</th><th>预期</th><th>实际</th><th>状态</th><th>耗时</th></tr></thead><tbody>{rows}</tbody></table>
 </div></body></html>"""
 

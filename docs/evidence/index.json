@@ -276,6 +276,27 @@
       "review": "Independent reviewer found report/cancellation snapshot race; fixed by serialized publication and terminal transition plus bounded initial shutdown lock acquisition. Narrow rereview found no blockers; reviewer did not independently rerun tests.",
       "artifacts": [
         "artifacts/s06b-cancellation.xml"
+      ],
+      "commit": "75011806b53638d4cc487152898c1693da1b43af",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S07a",
+      "commit_locator": "feat: preserve reproduction evidence in test reports",
+      "environment": "Windows Python 3.12.10",
+      "red": "Missing input snapshot and unsafe description HTML reproduced; fixed-clock test proved report overwrite. Review caught revalidation crash for legacy ERROR expectation; supplemental test failed before fix.",
+      "command": "python -m pytest -q --junitxml=artifacts/s07a-report-inputs.xml",
+      "exit_code": 0,
+      "passed": 240,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation"
+      ],
+      "scope": "4 report unit tests plus durable service integration: exact source/hash/seed, structured expectation/observation/error, escaped HTML, UUID collision prevention, stored profile/platform/SUT context. Legacy invalid expectations remain reportable. Shared redaction, atomic file and metadata publication, complete ReportSnapshot API and endpoint hardening remain later S07 increments.",
+      "review": "Independent read-only reviewer identified legacy invalid-expectation crash; fixed with red/green test and narrow rereview, no remaining blockers. Standalone storage-first import verified after eliminating a circular dependency.",
+      "artifacts": [
+        "artifacts/s07a-report-inputs.xml"
       ]
     }
   ]
