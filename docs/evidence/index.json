@@ -193,6 +193,26 @@
       "scope": "Windows OS lock tested across real processes; second owner refused before migration/recovery while history readable; graceful exit and forced termination release lock; failed initialization releases lock. POSIX runtime verification and service entrypoint wiring remain pending.",
       "artifacts": [
         "artifacts/s05b-runtime-lock.xml"
+      ],
+      "commit": "252f9c58a08be088fbba32942d2ad0149c80c6f0",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S05b-service",
+      "commit_locator": "feat: execute durable tasks through a bounded service",
+      "environment": "Windows Python 3.12.10",
+      "red": "8 lifecycle failures before TaskService existed; supplemental regression reproduced accepted cancellation overwritten by report failure",
+      "command": "python -m pytest -q --junitxml=artifacts/s05b-service.xml",
+      "exit_code": 0,
+      "passed": 204,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "13 HTTP Mock lifecycle tests: persist-before-network, immutable queued input, per-case result writes, memory-only credentials cleanup, login/report/persistence failure semantics, one consumer with queue20, sequential cancellation and shutdown lock retention. Public Web/CLI still use the old manager until next entrypoint commit; concurrent execution and full safe reports remain S06/S07.",
+      "artifacts": [
+        "artifacts/s05b-service.xml"
       ]
     }
   ]

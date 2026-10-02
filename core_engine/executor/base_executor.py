@@ -60,6 +60,7 @@ class TaskResult:
     passed: int = 0
     failed: int = 0
     error: int = 0
+    cancelled: int = 0
     case_results: list[CaseResult] = field(default_factory=list)
     start_time: float = 0.0
     end_time: float = 0.0

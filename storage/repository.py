@@ -250,3 +250,11 @@ class TaskRepository:
             if row is None:
                 raise KeyError((task_id, format))
             return dict(row)
+
+    def mark_case_running(self, task_id, logical_id):
+        with self.database.connection(write=True) as db:
+            if self._required(db, task_id)['state'] not in {'RUNNING', 'CANCEL_REQUESTED'}:
+                raise ValueError('task is not executing')
+            updated = db.execute("UPDATE task_cases SET state='RUNNING' WHERE task_id=? AND logical_id=? AND state='PENDING'", (task_id, logical_id))
+            if updated.rowcount != 1:
+                raise ValueError('case is not pending')

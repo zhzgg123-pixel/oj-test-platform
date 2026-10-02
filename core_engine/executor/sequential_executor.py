@@ -69,12 +69,25 @@ class SequentialExecutor(BaseExecutor):
                     result.error += 1
                 return result
 
+        cancel_event = kwargs.get('cancel_event')
+        on_start = kwargs.get('on_case_start', lambda case: None)
+        on_result = kwargs.get('on_case_result', lambda result: None)
+
         # 逐个执行
         for case in cases:
-            cr = self._execute_one(case, adapter)
+            if cancel_event is not None and cancel_event.is_set():
+                now = time.time()
+                cr = CaseResult(case=case, status='CANCELLED', error_message='CANCELLED_BEFORE_SUBMISSION',
+                                start_time=now, end_time=now, attempt_count=0)
+            else:
+                on_start(case)
+                cr = self._execute_one(case, adapter)
+            on_result(cr)
             result.case_results.append(cr)
             if cr.passed:
                 result.passed += 1
+            elif cr.status == "CANCELLED":
+                result.cancelled += 1
             elif cr.status == "ERROR":
                 result.error += 1
             else:
@@ -85,7 +98,7 @@ class SequentialExecutor(BaseExecutor):
 
     def _execute_one(self, case: TestCase, adapter: BaseOJAdapter) -> CaseResult:
         """Validate intent first, then interpret only an explicit observation."""
-        cr = CaseResult(case=case, status="RUNNING", start_time=time.time())
+        cr = CaseResult(case=case, status="RUNNING", start_time=time.time(), attempt_count=0)
         anonymous_adapter = None
         try:
             try:
@@ -98,6 +111,7 @@ class SequentialExecutor(BaseExecutor):
             if case.auth_mode == "anonymous":
                 anonymous_adapter = type(adapter)(base_url=adapter.base_url, timeout=adapter.timeout)
                 adapter = anonymous_adapter
+            cr.attempt_count = 1
             submitted = adapter.submit_code(case.problem_id, case.code, case.lang)
             observed = submitted.observation
             judge = submitted.judge_result
