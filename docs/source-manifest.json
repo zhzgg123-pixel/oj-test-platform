@@ -1,0 +1,507 @@
+{
+  "source": "cpp-oj-vibecoding/OJ-Test-Platform",
+  "date": "2026-10-02",
+  "cpp_local_sha": "84ded72d705cd9e950ad5d4d644e1cefdb4775d5",
+  "cpp_integration_sha": "cede96af7ea62f07bc1fbc0c466658b771b57777",
+  "files": [
+    {
+      "path": "backend/__init__.py",
+      "source_sha256": "8de94c582c3bae12d117e372e7e6ae90de87210855c8cf10b64634de3fce1184",
+      "action": "import",
+      "import_sha256": "8de94c582c3bae12d117e372e7e6ae90de87210855c8cf10b64634de3fce1184"
+    },
+    {
+      "path": "backend/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "6755ec9a7f32e3dd23d3d3b049a40db5b938caa54801b5cb463fb51077a32fdb",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/__pycache__/app.cpython-314.pyc",
+      "source_sha256": "0b071992ae50401afcca38d4513ae679bbee68abb20d64127815cc87604f32f8",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/app.py",
+      "source_sha256": "48f53e4dc4e12d0810deed92a27ac436c658c5014031be009cf633087c9f65a1",
+      "action": "import",
+      "import_sha256": "48f53e4dc4e12d0810deed92a27ac436c658c5014031be009cf633087c9f65a1"
+    },
+    {
+      "path": "backend/routers/__init__.py",
+      "source_sha256": "bb39e2a1af8cfe251bb875c32a89d033b43a1bd46e14238f1aed425313ef5191",
+      "action": "import",
+      "import_sha256": "bb39e2a1af8cfe251bb875c32a89d033b43a1bd46e14238f1aed425313ef5191"
+    },
+    {
+      "path": "backend/routers/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "fd3e4b34d1329d9917bc4eda36ba8f3ac7300d73ed9ec6b91077074986ceb2c0",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/routers/__pycache__/config_router.cpython-314.pyc",
+      "source_sha256": "9fb5f5236539d2bd24d62f7e4b70d89d6543a3f6c7211af2e2d3e9504ecfa902",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/routers/__pycache__/plugin_router.cpython-314.pyc",
+      "source_sha256": "f429ced42a079bf14ea491cfd1869f22c57f2a27b5018ae54566041b8de31b2e",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/routers/__pycache__/report_router.cpython-314.pyc",
+      "source_sha256": "e684ce5e34f44c750ece62cf15ef30c3734500c78f2326aefb885a27e81ea430",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/routers/__pycache__/task_router.cpython-314.pyc",
+      "source_sha256": "905628307d0226f171281e96aa7c8c358524b355bae399c004be1e9abcd9567c",
+      "action": "exclude"
+    },
+    {
+      "path": "backend/routers/config_router.py",
+      "source_sha256": "56bfb3addaf29aada51da20f499f88724d9537ded49d3869604683f416da6522",
+      "action": "import",
+      "import_sha256": "56bfb3addaf29aada51da20f499f88724d9537ded49d3869604683f416da6522"
+    },
+    {
+      "path": "backend/routers/plugin_router.py",
+      "source_sha256": "32e530a2c3dc82cfb7d76d94de429fce719fb497572bb4bc2b983d989c988973",
+      "action": "import",
+      "import_sha256": "32e530a2c3dc82cfb7d76d94de429fce719fb497572bb4bc2b983d989c988973"
+    },
+    {
+      "path": "backend/routers/report_router.py",
+      "source_sha256": "164461077c645ebf68b38267e2e4097f8c5437f74d23b0c49c5202bd8b496842",
+      "action": "import",
+      "import_sha256": "164461077c645ebf68b38267e2e4097f8c5437f74d23b0c49c5202bd8b496842"
+    },
+    {
+      "path": "backend/routers/task_router.py",
+      "source_sha256": "bb97b4db38a99cc61c7b66d6a082e89512acf9da21a32aefe58147efa0a56b68",
+      "action": "import",
+      "import_sha256": "bb97b4db38a99cc61c7b66d6a082e89512acf9da21a32aefe58147efa0a56b68"
+    },
+    {
+      "path": "config_center/__init__.py",
+      "source_sha256": "b743bb08ec6c5f3439779b586b3be6ce8334f7328521f051052dc3eda51116e3",
+      "action": "import",
+      "import_sha256": "b743bb08ec6c5f3439779b586b3be6ce8334f7328521f051052dc3eda51116e3"
+    },
+    {
+      "path": "config_center/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "d712b8b31beb18bddb0efddb5e1853c2973237665f9b12b17335441f060a7ede",
+      "action": "exclude"
+    },
+    {
+      "path": "config_center/__pycache__/config.cpython-314.pyc",
+      "source_sha256": "0a8b5582a3908f7c1faa80ef4a8b52ecefbdb4f96da19a8a7403d157c15ea597",
+      "action": "exclude"
+    },
+    {
+      "path": "config_center/config.prod.yaml",
+      "source_sha256": "45fba4f7202e6a37d55e416ceb5565f445f0c3c9d9ed6458dc2f50cbd7281697",
+      "action": "import",
+      "import_sha256": "45fba4f7202e6a37d55e416ceb5565f445f0c3c9d9ed6458dc2f50cbd7281697"
+    },
+    {
+      "path": "config_center/config.py",
+      "source_sha256": "0cb46175f56e72bfc75132e179987c4f46d31e5a5ef865527580c5ae3b9069a5",
+      "action": "import",
+      "import_sha256": "0cb46175f56e72bfc75132e179987c4f46d31e5a5ef865527580c5ae3b9069a5"
+    },
+    {
+      "path": "config_center/config.yaml",
+      "source_sha256": "22fdde6f0a53961b734ad760c7ddff4201a48fdc2ff418ef05a70ef74e0256d3",
+      "action": "import",
+      "import_sha256": "22fdde6f0a53961b734ad760c7ddff4201a48fdc2ff418ef05a70ef74e0256d3"
+    },
+    {
+      "path": "core_engine/__init__.py",
+      "source_sha256": "7ede071a18997a9f2739f3e1489718c4d9e34fac35c79813b74bbce9a368214e",
+      "action": "import",
+      "import_sha256": "7ede071a18997a9f2739f3e1489718c4d9e34fac35c79813b74bbce9a368214e"
+    },
+    {
+      "path": "core_engine/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "66f50bb0a8f7288fbf6e03db98c213795d148fcd4a8292499ec6a9fb2b5d2ebc",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/api_client/__init__.py",
+      "source_sha256": "fd8215dfa58795a945f747e667079320082652ac13f841eb827ecff95f50a166",
+      "action": "import",
+      "import_sha256": "fd8215dfa58795a945f747e667079320082652ac13f841eb827ecff95f50a166"
+    },
+    {
+      "path": "core_engine/api_client/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "6951aec57d8407600824a1b645dc78b9512a603d280bc4e0713a29685a7c51cc",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/api_client/__pycache__/api_result.cpython-314.pyc",
+      "source_sha256": "bfc3e8eae45bd895035b69815a8b26bc5cd84c2a0db57e54564653467e3d022a",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/api_client/__pycache__/request_client.cpython-314.pyc",
+      "source_sha256": "74eebeffbe8dc05c291c50afe589c1c1bf0c0c6861862a6cbebd8a2b47eb5bd1",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/api_client/api_result.py",
+      "source_sha256": "684f90407201e00bd9ce2b72ab8a49d106f936baecbe7e36609941ae93f9ec3f",
+      "action": "import",
+      "import_sha256": "684f90407201e00bd9ce2b72ab8a49d106f936baecbe7e36609941ae93f9ec3f"
+    },
+    {
+      "path": "core_engine/api_client/request_client.py",
+      "source_sha256": "368951aeacc8a12fa616ba73b71a6bef72967c11da16b9ae8be22f5aa5f09924",
+      "action": "import",
+      "import_sha256": "368951aeacc8a12fa616ba73b71a6bef72967c11da16b9ae8be22f5aa5f09924"
+    },
+    {
+      "path": "core_engine/assertion/__init__.py",
+      "source_sha256": "6372e12feb1dfa868dd3d604c070918133d2875f8684efadfa878f0ac788de25",
+      "action": "import",
+      "import_sha256": "6372e12feb1dfa868dd3d604c070918133d2875f8684efadfa878f0ac788de25"
+    },
+    {
+      "path": "core_engine/assertion/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "594367d846a088f3fe513bbcf30dfb3e8e63cd642cf8dff102d21a84d8dc7a1b",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/assertion/__pycache__/judge_oracle.cpython-314.pyc",
+      "source_sha256": "c36f8193ef9799c0f1722d15c603670a7facd5d5aec2f70ab5fa6bb72b702ff0",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/assertion/judge_oracle.py",
+      "source_sha256": "ea3f1cf29890a633027601c3a458b2063fa756e140eead6e64da75faa426d4ec",
+      "action": "import",
+      "import_sha256": "ea3f1cf29890a633027601c3a458b2063fa756e140eead6e64da75faa426d4ec"
+    },
+    {
+      "path": "core_engine/case_engine/__init__.py",
+      "source_sha256": "fd8e87d20412af881b9efdf564dedea62b9dc4f71b8d61b707f2c51992ade1f2",
+      "action": "import",
+      "import_sha256": "fd8e87d20412af881b9efdf564dedea62b9dc4f71b8d61b707f2c51992ade1f2"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "68d7086353cb7004a798c28e1a95ba6199866488faa894c0f8170c9dba5fa3f7",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/base_generator.cpython-314.pyc",
+      "source_sha256": "a7037c5b6567eec9107aa9bc206e9053ef155803b70e645a4cdd73c01de5015c",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/boundary_generator.cpython-314.pyc",
+      "source_sha256": "6dc01f82527dd079317f2bc9b4775857f51bb118154e3b4f2cb60f6fc8c6ee15",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/case_builder.cpython-314.pyc",
+      "source_sha256": "d263e2af2d49ac2c8153b237123e517d03ad9bd816f21734bb493f75799bf562",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/random_generator.cpython-314.pyc",
+      "source_sha256": "9fa16c26fc4c59625c16bd81154d1a7b531dd9998e339f9c377ec1a40da16448",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/__pycache__/rule_generator.cpython-314.pyc",
+      "source_sha256": "23106a3d86c57a2a2c4d98a305cb9a9f651ca089c8cea4f7fb96ccb9913f0aaa",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/case_engine/base_generator.py",
+      "source_sha256": "8c2d9e066e6c702d12bebda4c979c9f8516cced50c8a481586970fb5fe8fb53d",
+      "action": "import",
+      "import_sha256": "8c2d9e066e6c702d12bebda4c979c9f8516cced50c8a481586970fb5fe8fb53d"
+    },
+    {
+      "path": "core_engine/case_engine/boundary_generator.py",
+      "source_sha256": "2d3fa36d14b14e27751a2ad6ada7368c29add77fb9e2ce02afe83fa444fc4760",
+      "action": "import",
+      "import_sha256": "2d3fa36d14b14e27751a2ad6ada7368c29add77fb9e2ce02afe83fa444fc4760"
+    },
+    {
+      "path": "core_engine/case_engine/case_builder.py",
+      "source_sha256": "a3bd3374c053a945b7a2d80f9347237eca365ee7ad05cd1a7ab1d00fc35d5917",
+      "action": "import",
+      "import_sha256": "a3bd3374c053a945b7a2d80f9347237eca365ee7ad05cd1a7ab1d00fc35d5917"
+    },
+    {
+      "path": "core_engine/case_engine/random_generator.py",
+      "source_sha256": "c763b510a8463f40dc02dfabfee88185a2ca447da61f80f6afbe03eb1c198606",
+      "action": "import",
+      "import_sha256": "c763b510a8463f40dc02dfabfee88185a2ca447da61f80f6afbe03eb1c198606"
+    },
+    {
+      "path": "core_engine/case_engine/rule_generator.py",
+      "source_sha256": "9099108f74296aca5e0f988d98129e0932877930658a9f0b3bb02b657db61f23",
+      "action": "import",
+      "import_sha256": "9099108f74296aca5e0f988d98129e0932877930658a9f0b3bb02b657db61f23"
+    },
+    {
+      "path": "core_engine/executor/__init__.py",
+      "source_sha256": "c1c6615bda1e90b96b87ce2193d375fa3e3adc0e60b38b074157ac5c383dbeae",
+      "action": "import",
+      "import_sha256": "c1c6615bda1e90b96b87ce2193d375fa3e3adc0e60b38b074157ac5c383dbeae"
+    },
+    {
+      "path": "core_engine/executor/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "e3b1a94e3fe1951449bba4e5cfdbcd783c1ca49297997f28f81ec8c0373e92ba",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/executor/__pycache__/base_executor.cpython-314.pyc",
+      "source_sha256": "7eb9ec180ad0b6c796dd254883c2fca5ea6f55d96f1a34c22675d14bc88e32f2",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/executor/__pycache__/concurrent_executor.cpython-314.pyc",
+      "source_sha256": "7dd79a7281a6cedc953a272dfa30458ae2bd758f971b32552e7bb1c035f7c0e0",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/executor/__pycache__/sequential_executor.cpython-314.pyc",
+      "source_sha256": "f3f8835b46f0e5c921019f44a48b771700652fcb6e70b36057e159ec1d615b29",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/executor/__pycache__/task_executor.cpython-314.pyc",
+      "source_sha256": "e36bd985f6e0ba1df9792322fa21da2fc70a19dd146373bfc093efc2d82adf17",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/executor/base_executor.py",
+      "source_sha256": "f2d02a313baed7a7dee0964bcf40be5bcd7b69d2d983b82eabe6234623162bbc",
+      "action": "import",
+      "import_sha256": "f2d02a313baed7a7dee0964bcf40be5bcd7b69d2d983b82eabe6234623162bbc"
+    },
+    {
+      "path": "core_engine/executor/concurrent_executor.py",
+      "source_sha256": "3efbd57e216d953d7be74f310e8fcfbd7c5e1c0bca9ecb927d4a29723a31eb0b",
+      "action": "sanitize_password_defaults",
+      "import_sha256": "0c8166310a27cbeece147324b0c85c4aa66b0289962690a8e0d034b055f382f5"
+    },
+    {
+      "path": "core_engine/executor/sequential_executor.py",
+      "source_sha256": "ff3a90f14669363f486d37260f063bc3cf4e31368101043dccc406eaa8acd220",
+      "action": "sanitize_password_defaults",
+      "import_sha256": "9f76712d34b4e656003512bcbbd9ab8dbfe4dfac4d47a2109eab3a66d8c54825"
+    },
+    {
+      "path": "core_engine/executor/task_executor.py",
+      "source_sha256": "10cd481efae024b9ec17c4321c640e99d34585ba9108eaf99048431658c3bd27",
+      "action": "sanitize_password_defaults",
+      "import_sha256": "c1b77212c26b9b2df6dd57b688bda587aaaf51a514db828fff24d17b68b07ffd"
+    },
+    {
+      "path": "core_engine/report_engine/__init__.py",
+      "source_sha256": "a9ba68bfa243ff3535ae55822f89aa33a96e75bd47a05e849c88a9027d78ca45",
+      "action": "import",
+      "import_sha256": "a9ba68bfa243ff3535ae55822f89aa33a96e75bd47a05e849c88a9027d78ca45"
+    },
+    {
+      "path": "core_engine/report_engine/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "577ad7295c8a8fb719af7175f571ea1b2e8f60ad6380594eaafac93f3c99b67b",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/report_engine/__pycache__/report_generator.cpython-314.pyc",
+      "source_sha256": "5d92e44b5fbe2d0e7601a68027cdf313d2f365e539b497e1663b0d5440e4fa66",
+      "action": "exclude"
+    },
+    {
+      "path": "core_engine/report_engine/report_generator.py",
+      "source_sha256": "8eda31e13ce18bced4942c7a39759d2a55a82b1bea8bfa60d0651c843c9afd7e",
+      "action": "import",
+      "import_sha256": "8eda31e13ce18bced4942c7a39759d2a55a82b1bea8bfa60d0651c843c9afd7e"
+    },
+    {
+      "path": "frontend/index.html",
+      "source_sha256": "edb288cbb29e8cedad00c1378fc41fa15a8be33061b0e37cd7e33e6ae78536c3",
+      "action": "import",
+      "import_sha256": "edb288cbb29e8cedad00c1378fc41fa15a8be33061b0e37cd7e33e6ae78536c3"
+    },
+    {
+      "path": "logs/.gitkeep",
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "action": "exclude"
+    },
+    {
+      "path": "main.py",
+      "source_sha256": "bfd28d89ac3020f884a48e7a32a9e429f6205f263555208875db275b0788a8d9",
+      "action": "sanitize_password_defaults",
+      "import_sha256": "1b5b67ec3ea9772f4e11f3d35c29215a6b7bb1fe3e5c9a83ae1cc84ce6bc74f4"
+    },
+    {
+      "path": "OJ测试开发工具.md",
+      "source_sha256": "4cadebf1c81cf6e8738a204c5bf67b088d2fcf1dfce266a05e2af65213021857",
+      "action": "import",
+      "import_sha256": "4cadebf1c81cf6e8738a204c5bf67b088d2fcf1dfce266a05e2af65213021857"
+    },
+    {
+      "path": "plugins/__init__.py",
+      "source_sha256": "8ee6a51ebf657b97d7689113a0aebac41ab4556772c8fa6ab9c6cd61f6e5f284",
+      "action": "import",
+      "import_sha256": "8ee6a51ebf657b97d7689113a0aebac41ab4556772c8fa6ab9c6cd61f6e5f284"
+    },
+    {
+      "path": "plugins/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "4e3d4bdb2c58b55c971b6928d276220682d96ab72f1cc2822b1a0136ecdd96c6",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/__pycache__/base_adapter.cpython-314.pyc",
+      "source_sha256": "3aadc67f1573b88079a184ae80a00c92e7d8db8e2d933db4d7b763b475c3dd13",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/__pycache__/plugin_manager.cpython-314.pyc",
+      "source_sha256": "f93d73fcc0bd5143d459b081d9f407ac6d4aeecfab3a7b0ca46074df4e0174d8",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/base_adapter.py",
+      "source_sha256": "a81921a7ac3514ee0c36e1b7ac255ceae015c0e2797c3940ed841c2a7ddbd977",
+      "action": "import",
+      "import_sha256": "a81921a7ac3514ee0c36e1b7ac255ceae015c0e2797c3940ed841c2a7ddbd977"
+    },
+    {
+      "path": "plugins/local_oj/__init__.py",
+      "source_sha256": "0a78f87adb48e72b647ff10ad3c9c7381e5c3f8ef5868dbbe34ee5342aed2eee",
+      "action": "import",
+      "import_sha256": "0a78f87adb48e72b647ff10ad3c9c7381e5c3f8ef5868dbbe34ee5342aed2eee"
+    },
+    {
+      "path": "plugins/local_oj/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "fc1b2cb198545f66ad5e265e02ad5c81fce398cba4be49faed6c7f2985286bff",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/local_oj/__pycache__/adapter.cpython-314.pyc",
+      "source_sha256": "5658c0e0ddffb378a3bf80585fcf6a4ae01405a3fb7bfaac3a53b0c8935b7339",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/local_oj/adapter.py",
+      "source_sha256": "ce765ff65682ec92193280441a12ca276ff853c62c3afd1dd71c85475ec49562",
+      "action": "import",
+      "import_sha256": "ce765ff65682ec92193280441a12ca276ff853c62c3afd1dd71c85475ec49562"
+    },
+    {
+      "path": "plugins/plugin_manager.py",
+      "source_sha256": "ac5402a0529e8a09d3a1312ab58ad6802d36aff08343e4535e9caac7553d4b7a",
+      "action": "import",
+      "import_sha256": "ac5402a0529e8a09d3a1312ab58ad6802d36aff08343e4535e9caac7553d4b7a"
+    },
+    {
+      "path": "plugins/school_oj/__init__.py",
+      "source_sha256": "58da0b8a553b8418bb192887b087f1da5cff4f68e3c7bd44ef4e4adf2772b17d",
+      "action": "import",
+      "import_sha256": "58da0b8a553b8418bb192887b087f1da5cff4f68e3c7bd44ef4e4adf2772b17d"
+    },
+    {
+      "path": "plugins/school_oj/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "6c05e631f39a869a517ae4ae769407014099957413a523c3ecf2103d317aa111",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/school_oj/__pycache__/adapter.cpython-314.pyc",
+      "source_sha256": "218d3e8c98286d79c0d8a41f91eaa2b188d2b1c8031fa14a66c17a1ccc8f548c",
+      "action": "exclude"
+    },
+    {
+      "path": "plugins/school_oj/adapter.py",
+      "source_sha256": "c74f9ae05d2819339b3c25036226ecfc912cb849ea9a4c8e1c84111c2ac16932",
+      "action": "import",
+      "import_sha256": "c74f9ae05d2819339b3c25036226ecfc912cb849ea9a4c8e1c84111c2ac16932"
+    },
+    {
+      "path": "reports/report_20260707_014637.html",
+      "source_sha256": "099805ddbe57be90cedce8f1d4005dc0b167cc4c4ea17587e43991c7408fc524",
+      "action": "exclude"
+    },
+    {
+      "path": "reports/report_20260707_014637.json",
+      "source_sha256": "630ad5f335cf323b832b39d3425c5d0d70a50baa142636b8bdea8ed5f8e4b78e",
+      "action": "exclude"
+    },
+    {
+      "path": "reports/report_20260707_015638.html",
+      "source_sha256": "a08a812fc7827ec54c49848cc8c71325ce7b9314eb77d850233b9bf340835477",
+      "action": "exclude"
+    },
+    {
+      "path": "reports/report_20260707_015638.json",
+      "source_sha256": "596b4ab8a6400c6bd42580b0526391cf10d58c3d549072ff7267800def5ca297",
+      "action": "exclude"
+    },
+    {
+      "path": "requirements.txt",
+      "source_sha256": "536a5b33818b567f2663b55709fc777b14bca27ea4dca8daa4e75a6e102b0d12",
+      "action": "import",
+      "import_sha256": "536a5b33818b567f2663b55709fc777b14bca27ea4dca8daa4e75a6e102b0d12"
+    },
+    {
+      "path": "serve_tp.py",
+      "source_sha256": "bd34e3b2f40e918f686bcf2ebc590796fe9f07d021c46d0820e245fbd3148027",
+      "action": "exclude"
+    },
+    {
+      "path": "task_center/__init__.py",
+      "source_sha256": "d90581d0f097cc87cae96909496350c7fbe82aa5c7f5d7381402cdd8b5603e27",
+      "action": "import",
+      "import_sha256": "d90581d0f097cc87cae96909496350c7fbe82aa5c7f5d7381402cdd8b5603e27"
+    },
+    {
+      "path": "task_center/__pycache__/__init__.cpython-314.pyc",
+      "source_sha256": "9731971de2c0f981a5166dd75fdf690f453064ab6cf41c8ff8faa5f249bb0061",
+      "action": "exclude"
+    },
+    {
+      "path": "task_center/__pycache__/models.cpython-314.pyc",
+      "source_sha256": "b5af012280151bf1d5579abff6fee227113ae30c526d91b28d722ac47264fdb8",
+      "action": "exclude"
+    },
+    {
+      "path": "task_center/__pycache__/task_manager.cpython-314.pyc",
+      "source_sha256": "42efb37b2e4241c66acd24fec1f9bfbb52dae6f844b7618784ce9ed218798142",
+      "action": "exclude"
+    },
+    {
+      "path": "task_center/models.py",
+      "source_sha256": "b37ddfcc211e16481866f2e6cecc35ba218ea79707b6325dea0a1780e70f2a11",
+      "action": "import",
+      "import_sha256": "b37ddfcc211e16481866f2e6cecc35ba218ea79707b6325dea0a1780e70f2a11"
+    },
+    {
+      "path": "task_center/task_manager.py",
+      "source_sha256": "a72cdcf3a560aec2279211777f86aa9a5408d615cd4e62cb981ff4e7ac8c2619",
+      "action": "import",
+      "import_sha256": "a72cdcf3a560aec2279211777f86aa9a5408d615cd4e62cb981ff4e7ac8c2619"
+    },
+    {
+      "path": "tp_b64_00",
+      "source_sha256": "06805d2c496e62429dc1b679505536bfe4c16a032cbcfe83e29982d6ae497519",
+      "action": "exclude"
+    },
+    {
+      "path": "tp_b64_01",
+      "source_sha256": "b105db4bfb7b6c5083db20c2ca3751ca8b7430426aa0bdd2da1702fa44ddbd63",
+      "action": "exclude"
+    },
+    {
+      "path": "tp_b64_02",
+      "source_sha256": "e8c9a11c36f3c1be202df54ef5f9242e2b27267d65ff08cbc6f4198cd00e66b3",
+      "action": "exclude"
+    }
+  ]
+}

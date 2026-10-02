@@ -1,0 +1,12 @@
+# 生产环境配置
+oj:
+  base_url: "https://oj.example.com"
+
+judge:
+  poll_interval: 2.0
+  poll_timeout: 120
+  max_concurrent: 10
+
+test:
+  log_level: "WARNING"
+  generate_case_count: 20

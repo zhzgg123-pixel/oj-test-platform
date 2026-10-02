@@ -1,0 +1,18 @@
+env: dev
+
+oj:
+  base_url: "http://localhost:8080"
+  timeout: 30
+  retry_count: 3
+  retry_delay: 1.0
+
+judge:
+  poll_interval: 1.0
+  poll_timeout: 60
+  max_concurrent: 5
+
+test:
+  log_level: "INFO"
+  report_dir: "reports"
+  case_strategies: ["random", "boundary", "rule"]
+  generate_case_count: 5
