@@ -1,0 +1,5 @@
+schema_version: 1
+base_url: http://127.0.0.1:18090
+compose_project: oj-platform-e2e
+database: oj_platform_e2e
+sut_sha: cede96af7ea62f07bc1fbc0c466658b771b57777

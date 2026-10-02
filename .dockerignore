@@ -13,6 +13,8 @@
 !frontend/**
 !tests/mock_oj/server.py
 !scripts/smoke_compose.py
+!infra/cpp-oj.Dockerfile
+!infra/cpp_oj_entrypoint.py
 **/__pycache__/**
 **/*.pyc
 **/.env*

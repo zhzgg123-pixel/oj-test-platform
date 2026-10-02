@@ -495,6 +495,92 @@
         "artifacts/s09-images.txt"
       ],
       "limits": "Mock does not execute C++; real OJ and GitHub Actions remain unverified. Development unknown-version smoke is not release evidence."
+    },
+    {
+      "stage": "S10a",
+      "status": "PASS",
+      "scope": "Isolated real SUT infrastructure and authenticated API only; real verdict matrix remains NOT_RUN",
+      "base_commit": "3bfc9c35dc191e0cf34842b5c53d084e9e94d6de",
+      "tested_files_sha256": {
+        ".dockerignore": "528537c60e0bd40fdde1dda60dac56502a220d4644c56c5a53769fa3e8f3aad8",
+        "compose.e2e.yaml": "2631342d0361cd452ba4443d350ed9d9f476f7eb2545474834018e1c4c230a28",
+        "config_center/e2e.example.yaml": "ca769f161c24d06196e865879a407afb1e47c3e3edfa36e3aa9b2fabfd237945",
+        "infra/cpp-oj.Dockerfile": "711c7bc14132d8742b42fd834b9caed185566fe18a6c4b2ca62c21a4d4cff461",
+        "infra/cpp_oj_entrypoint.py": "3ac3f9f707eac2c41c3716bfb5eec806b9b6815b425445e1231c1784db1f600a",
+        "infra/e2e-nginx.conf": "66604618d9be2fe6d6ddfc273aa69c2c803a5b0f6c8c45a5f52ebb7cb6282ef5",
+        "scripts/prepare_e2e.py": "87450624f0a5f4fa2612cabd8ea36cd76ebb11c95ad44691817eab6bf3f814cb",
+        "scripts/prepare_sut.ps1": "52067c3af732cfa42995965ba11735cae102115ef5cbf6ab285f16668a05f0c0",
+        "scripts/e2e_environment.py": "ddb04c31ffa7c56735d0929a4c14ef1478118c991c5a426c9c2834b182068b76",
+        "tests/unit/test_e2e_bootstrap.py": "3389c5559df50c00d4a79629c221c12f05e67edaa9200621329a0d6c7e5e26c5",
+        "tests/unit/test_e2e_target.py": "8e4c05aad8541b37a2a105a2bf31db40622535e9851a62c87fe169316fad52dc"
+      },
+      "environment": "Windows, Python 3.12.10, Docker Linux amd64, GCC 12",
+      "tests": {
+        "passed": 281,
+        "failures": 0,
+        "errors": 0,
+        "warnings": 1
+      },
+      "commands": [
+        "python scripts/prepare_e2e.py",
+        "docker compose --env-file .env.e2e -f compose.e2e.yaml config --quiet",
+        "docker compose --env-file .env.e2e -f compose.e2e.yaml build --build-arg DEBIAN_MIRROR=mirror.sjtu.edu.cn",
+        "docker compose --env-file .env.e2e -f compose.e2e.yaml up -d --wait",
+        "python scripts/e2e_environment.py --config config_center/e2e.example.yaml --evidence artifacts/s10a-environment.json",
+        "python -m pytest -q --junitxml=artifacts/s10a-tests.xml"
+      ],
+      "exit_codes": {
+        "prepare": 0,
+        "compose_config": 0,
+        "build": 0,
+        "start": 0,
+        "environment_verification": 0,
+        "pytest": 0,
+        "empty_e2e_gate_expected_failure": 4
+      },
+      "runtime": {
+        "schema_version": 1,
+        "base_url": "http://127.0.0.1:18090",
+        "compose_project": "oj-platform-e2e",
+        "database": "oj_platform_e2e",
+        "sut_sha": "cede96af7ea62f07bc1fbc0c466658b771b57777",
+        "deployment_id": "be14baa93c51a32663b1e4d22a77c74a",
+        "services": {
+          "mysql": {
+            "container_id": "d6d3de83bd4843ff785adf712cb936f8ca56a7218a571cc58d00dfa69308376d",
+            "image_id": "sha256:9c3380eac945af0736031b200027f581925927c81e010056214a4bd6b6693714",
+            "health": "healthy"
+          },
+          "cpp-oj": {
+            "container_id": "9d75f3f54210ca4b48d25dae46816607a77050d147d10489cfcfc074b3f976c2",
+            "image_id": "sha256:e005428df00990138db0b3c020bfac0dda96f35f52c4bb71df25fd1bf4536c5d",
+            "health": "healthy"
+          },
+          "gateway": {
+            "container_id": "363a3a65a4f12a82ec1ad8efb1ba5418027087e8f83cd98ed56214d266dabf34",
+            "image_id": "sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752",
+            "health": "healthy"
+          }
+        },
+        "status": "PASS",
+        "scope": "infrastructure and authenticated API only; verdict matrix not yet run"
+      },
+      "review": "Independent read-only reviews of bootstrap, HTTPS mirror build and gateway topology found no blocking issues. Final full regression: 281 passed, 1 upstream warning.",
+      "findings": [
+        "HTTP Debian source failed; verified HTTPS and optional allowlisted SJTU mirror resolved dependency download. No TLS or package signature bypass.",
+        "Docker internal-only network did not publish configured host port. Added isolated non-root Nginx ingress; SUT and MySQL remain internal-only. Gateway retries disabled.",
+        "Initial Nginx startup failed on read-only default temp paths; all temp directories moved to tmpfs and startup reverified."
+      ],
+      "artifacts": [
+        "artifacts/s10a-tests.xml",
+        "artifacts/s10a-tests.txt",
+        "artifacts/s10a-topology-red.txt",
+        "artifacts/s10a-build.txt",
+        "artifacts/s10a-start.txt",
+        "artifacts/s10a-environment.json",
+        "artifacts/s10a-db-initial.json",
+        "artifacts/s10a-e2e-gate.txt"
+      ]
     }
   ]
 }

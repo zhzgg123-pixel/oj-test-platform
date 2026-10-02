@@ -447,7 +447,7 @@ python scripts/cleanup_e2e.py --ledger artifacts/e2e-fixtures.json
 
 **文件**：新增 `.github/workflows/regression.yml`、`scripts/check_evidence.py`、`docs/ci.md`；更新测试依赖锁和 README 状态链接。
 
-**前提**：取得用户已提到的 GitHub 仓库 URL，核实读写权限和是否已有不相干代码。Gitee 继续作为 origin；GitHub 使用名为 github 的第二远端，未经核验不能覆盖已有分支。没有 URL 时只完成可本地验证的 workflow 文件，真实 CI 标 BLOCKED。
+**前提（已完成仓库准备）**：用户授权创建的 GitHub 私有仓库为 `https://github.com/zhzgg123-pixel/oj-test-platform`，已核实 Actions 启用并同步 S09 main。Gitee 继续作为 origin；GitHub 使用名为 github 的第二远端。后续按同一提交运行 CI，仍需实际工作流和制品证据，不能仅凭仓库存在标记通过。
 
 **接口**：工作流运行 `python -m pytest -m "not e2e" --junitxml=artifacts/junit.xml`；`check_evidence.py` 解析 JUnit，要求 tests>0、failures=0、errors=0，并检查指定报告存在且 JSON total>0。它还记录平台 SHA 与运行环境，不允许仅创建空 HTML 冒充制品。
 
