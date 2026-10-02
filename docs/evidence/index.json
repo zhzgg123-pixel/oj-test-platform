@@ -1082,6 +1082,24 @@
         "artifacts/s12-fix-unit.xml",
         "artifacts/s12-fix-unit.txt"
       ]
+    },
+    {
+      "stage": "S12-documentation",
+      "status": "PASS",
+      "scope": "Documentation and local audit; final commit CI/remote/tag pending",
+      "base_commit": "497605a9f6948bb0d7cd991a6758329b8ac9170b",
+      "checks": [
+        "README covers installation, configuration, Web, CLI, Mock, Docker, real OJ and CI with SQLite/MySQL roles",
+        "Replaced contradictory legacy completion claims; architecture and honest limits retained",
+        "Document relative links, source paths and referenced test nodes verified",
+        "README CLI example executed against HTTP Mock:6 passed,exit0",
+        "Independent requirement review found no remaining documentation blockers"
+      ],
+      "artifacts": [
+        "docs/acceptance.md",
+        "docs/troubleshooting.md",
+        "artifacts/s12-cli-doc/cli.txt"
+      ]
     }
   ]
 }

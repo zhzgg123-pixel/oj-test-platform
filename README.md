@@ -2,96 +2,105 @@
 
 [![Platform regression](https://github.com/zhzgg123-pixel/oj-test-platform/actions/workflows/regression.yml/badge.svg)](https://github.com/zhzgg123-pixel/oj-test-platform/actions/workflows/regression.yml)
 
-Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清单逐步完善。
+Python / FastAPI OJ 自动化测试平台：YAML 题目规则、三类用例策略、Web/CLI 共用任务服务、SQLite 历史、顺序/线程池并发和 HTML/JSON 报告。
 
-## 当前状态
+已验证：Windows 干净安装 307 条非 E2E 回归；GitHub Linux Python 3.12/3.14 各 307 条；Docker 重建持久化；固定真实 C++ OJ 的 32 条测试和 30 对报告。
+依据是 [完整 CI 运行](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033913862) 的提交 `f75c76e1e37d8a88136acf950f7946b06ebfb4aa`。
+[验收对照](docs/acceptance.md)区分 Mock、真实判题、浏览器和 CI；历史阶段记录见 [进度](docs/progress.md)。GitHub 为私有仓库，运行和制品需仓库访问权限。
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 Windows Python 3.12 和 GitHub Linux Python 3.12/3.14 各 304 条非 E2E 回归通过。Web／CLI 已共用 SQLite 持久化任务服务。**Docker 与 Mock 持久化、32 条本地真实 OJ 联调已通过；CI 双版本回归和 Docker smoke 已通过首轮，真实 C++ CI 与失败归档验收仍在推进**。
+## 1. 安装
 
-原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
-
-## 开发环境
-
-主验收 Python 3.12，GitHub Actions 同时验证 3.14。Windows PowerShell：
+从本仓库根目录执行 Windows PowerShell 命令。Python 3.12 为主验收版本，3.14 在 CI 验证。
 
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.lock
-.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pip check
+.\.venv\Scripts\python.exe -m pytest -m "not e2e" -q
 ```
 
-测试默认使用随机本地端口，不访问真实 OJ。JUnit 可通过 `--junitxml=artifacts/tests.xml` 导出。手动启动 Mock：`python -m tests.mock_oj.server --port 8099`；固定测试账户 `tester / test-only` 仅用于该 Mock。Mock 不编译或执行 C++，其测试结果不证明真实判题正确。
+Linux 使用 `python3 -m venv .venv`，将后续解释器路径换为 `.venv/bin/python`。测试默认不访问真实 OJ；真实 E2E 需要显式启用。
 
-E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺文件或未选中任何 E2E 测试时非零退出。真实 E2E 的隔离启动与验收方式见 [真实 OJ 文档](docs/e2e.md)，CI 证据边界见 [CI 文档](docs/ci.md)。
+## 2. 配置与题目
 
-## 开发约定
+默认配置为 `config_center/config.yaml`，用 `--config` 选择文件。任务参数优先级：CLI 显式参数 > `OJ_*` 环境变量 > YAML > 默认值。
+内置 `profiles/a_plus_b.yaml` 与 `profiles/max_of_two.yaml`，规则和模板格式见 [题目配置](profiles/README.md)。profile 决定题意，problem-id 必须使用目标 OJ 上对应题目的实际 ID。
 
-- 在本仓库开发，原始桌面源码保留；C++ OJ 继续由独立仓库管理。
-- 不提交密码、Cookie、令牌、运行数据库或历史报告。已移除导入源码的默认密码。
-- 按 [实施计划](docs/implementation-plan.md) 小步修改、测试、提交、推送，核对 Gitee 远端 SHA。
-- 设计与验收口径见 [设计约定](docs/design-contract.md)。
+`random` 按 seed 抽样程序模板，`boundary` 使用 CE/TLE/RE 等模板，`rule` 检查匿名、缺失题目、空源码。case-count 是三类策略合计的精确数量。
+相同配置/seed 能复现实际提交源码；不是向任意 OJ 注入随机 stdin。两题 fixtures 是已部署题目数据的快照。
 
-## Adapter 兼容约定
+## 3. HTTP Mock
 
-新增 `submit_case(case) -> SubmissionReceipt` / `get_result(id)` 接口；旧 `submit_code` 和 `get_judge_result` 保留供现有插件迁移。LocalOJ 是同步协议，必须读取本次回执，不支持凭任意 ID 读取最近结果。`AuthResult` 兼容旧 `LoginResult` 名称。Web/CLI 使用独立 ExecutionCredentials 传递登录信息，不再把密码装入 TaskConfig。旧 `expected_status="ERROR"` 不再有效，需使用明确 HTTP 或业务错误预期；生成器的全面配置迁移在 S04 完成。
-
-## Web 与 CLI
+新开一个终端运行：
 
 ```powershell
-.\.venv\Scripts\python.exe main.py --config config_center/config.yaml
-.\.venv\Scripts\python.exe main.py --ci --config config_center/config.yaml --strategies random --count 1
+.\.venv\Scripts\python.exe -m tests.mock_oj.server --port 8099
 ```
 
-CLI 密码通过 `OJ_PASSWORD` 传入，用户名通过 `OJ_USERNAME` 或 `--username` 传入；不再接受 `--password`。不要把真实凭据提交到仓库。
+地址 `http://127.0.0.1:8099`，演示账号 `tester` / `test-only`。Mock 通过源码中的显式标记返回状态，不编译 C++；仅用于平台链路与故障注入测试。
 
-任务参数优先级为显式 CLI 参数 > `OJ_*` 环境变量 > 指定 YAML > 默认值。支持 `--problem-id`（兼容 `--problem`）、`--case-count`（兼容 `--count`）、`--seed`、`--timeout`、`--poll-timeout` 、`--db` 和 `--report-dir`。通过 `--mode concurrent --max-workers 3` 选择线程池并发（1–16 worker）；API 使用同名字段。
+## 4. Web
 
-CLI 退出码：0 表示至少执行一条且全部通过、报告生成成功；1 表示运行或用例失败；2 表示参数／配置错误或同库执行锁冲突；130 表示 Ctrl+C。`--output` 和报告只保存非秘密任务配置。
+```powershell
+.\.venv\Scripts\python.exe main.py --host 127.0.0.1 --port 8000 --db runtime/web.db --report-dir reports/web
+```
 
-API 的任务创建成功返回 202，非法配置返回 422。配置重载使用启动时同一个文件；重载失败保留原配置，报告目录或数据库路径变更需重启。导入 `main` 或 `backend.app` 不创建运行目录。
+浏览器打开 `http://127.0.0.1:8000/frontend/index.html`。填写 Mock 地址与演示账号，选择 a_plus_b、题号 1、策略、数量、seed 和顺序/并发模式即可创建任务。
+页面支持取消、分页历史、逐例源码/预期/实际详情、HTML/JSON 下载和终态删除。重启时使用相同数据库和报告目录，可继续查询历史。
 
-## YAML 题目与可复现生成
+## 5. CLI
 
-内置 `a_plus_b` 和 `max_of_two`，使用 `--profile max_of_two --problem-id 2` 选择本地配置及远端题号。远端题号需要对应相同题意，真实 OJ 联调仍待 S10 验证。
+保持 Mock 运行，使用独立数据库避免与 Web 的执行锁冲突：
 
-`--case-count` 是任务总用例数，按所选 random／boundary／rule 策略均分并交错执行；相同配置与 seed 生成相同提交源码。随机策略抽样程序模板，边界策略覆盖 CE／TLE／RE 模板，规则策略覆盖匿名、缺失题目和空源码。具体语义见 [profiles](profiles/README.md)。匿名用例使用独立无登录会话。
+```powershell
+$env:OJ_USERNAME = 'tester'
+$env:OJ_PASSWORD = 'test-only'
+.\.venv\Scripts\python.exe main.py --ci --base-url http://127.0.0.1:8099 --profile a_plus_b --problem-id 1 --strategies random rule --case-count 6 --seed 2 --mode concurrent --max-workers 2 --db runtime/cli.db --report-dir reports/cli
+Remove-Item Env:OJ_PASSWORD
+Remove-Item Env:OJ_USERNAME
+```
 
-`GET /api/v1/profiles` 列出可用题目；生成接口返回实际源码、源码哈希、profile 哈希和 seed。快照已持久化，完整证据报告仍待 S07。
+上述凭据仅用于 Mock。真实密码通过环境变量传入，拒绝 `--password` 参数；不写入 TaskConfig、数据库或报告。
+CLI 退出码：0 为非空任务全部断言通过且报告成功，1 为执行/断言失败，2 为配置或运行锁冲突，130 为用户中断。
+需要查询这次 CLI 历史时，在 CLI 结束后用 `--db runtime/cli.db --report-dir reports/cli` 启动 Web。
 
-## 持久化任务与历史
+## 6. Docker 与真实 OJ
 
-Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源码，再进入单消费者队列；最多等待 20 个任务，满队列返回 429。结果逐条保存，凭据仅在内存中保留到任务终态。SQLite 使用外键、WAL、短事务和版本迁移；版本 2 新增任务名称并保留版本 1 历史。已有数据升级前应停止服务并备份数据库。
+Docker Desktop 需运行 Linux 引擎。从干净提交构建本机演示：
 
-数据库优先级：`--db` > `OJ_DB` > YAML `test.db_path` > `runtime/tasks.db`；报告目录同理使用 `--report-dir`／`OJ_REPORT_DIR`／`test.report_dir`。相对路径相对于启动工作目录。Web 正占用某个数据库时，同库 CLI 退出 2；可指定 `--db runtime/ci.db` 独立执行。更换报告根目录后需同时迁移相应报告文件。
+```powershell
+$env:PLATFORM_SHA = (git rev-parse HEAD).Trim()
+docker compose --profile demo build
+docker compose --profile demo up -d --wait platform mock-oj
+docker compose --profile demo run --rm smoke --phase create
+```
 
-启动时只有获得操作系统运行锁的进程会恢复遗留活动任务：状态改为 INTERRUPTED，已完成结果保留，未完成用例为 ERROR／PROCESS_INTERRUPTED；不会自动重放提交。Windows 已有真实子进程验证，POSIX 分支待 Docker／CI 验证。顺序和并发取消保留在途结果、停止后续提交；关闭超时保留运行锁。COMPLETED 表示执行结束，只有所有用例通过且两种报告可读、哈希匹配才有 `success=true`。
+create 拒绝覆盖旧清单，后续使用 `--phase verify` 验证持久化。具体重启/重建、健康检查和新清单路径见 [Docker 文档](docs/docker.md)。普通 `down` 保留卷，不使用 `down -v` 清除历史。
 
-| 接口 | 用途 |
-|---|---|
-| `POST /api/v1/tasks` | 保存并排队，202；参数与原 `/api/tasks` 一致 |
-| `GET /api/v1/tasks?limit=20&offset=0` | 持久化历史，limit 1–100 |
-| `GET /api/v1/tasks/{id}` | 任务配置、状态、统计和成功判定 |
-| `GET /api/v1/tasks/{id}/cases` | 实际源码、预期、哈希和逐条结果 |
-| `GET /api/v1/tasks/{id}/reports/{html或json}` | 按数据库关联安全读取报告 |
-| `POST /api/v1/tasks/{id}/cancel` | 接受活动任务取消；终态 409，不存在 404 |
-| `DELETE /api/v1/tasks/{id}` | 仅删除终态任务及其报告；活动任务 409 |
+真实 C++ 联调的固定 SUT 为 `fa5ffe317f136f29039bc66e734fc687c4531e10`，按 [真实 OJ 文档](docs/e2e.md)准备专用数据库和容器后执行：
 
-旧 `/api/tasks` 委托同一服务，保留旧页面需要的时间字符串和返回字段。报告别名 `/reports/{任务UUID}.json`／`.html` 及已有平铺报告仍可读取。CLI 的 `--output` 返回 task_id，该任务之后可通过 Web 查询。
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests/e2e -m e2e --run-e2e --e2e-config config_center/e2e.example.yaml -q
+```
 
-## 有界并发
+fixture 自动创建两道题并精确清理；不要手工猜题号或把配置指向已有共享数据库。测试验证两题、顺序/并发、AC/WA/CE/TLE/RE、负向规则、会话隔离和取消。
 
-并发调度最多保留 max_workers 个在途 future，完成后才补充新用例。每个执行用例创建并关闭自己的 Adapter／Session，认证用例独立登录，匿名用例不带 Cookie；因此登录请求数会随认证用例数增加。旧 create_instance 工厂也不再缓存实例，调用者负责 close。
+## 7. CI 与证据
 
-顺序和并发复用同一单用例判定逻辑及逐条持久化回调。结果按输入顺序输出；任一 worker 登录／准备失败会停止补位并明确失败，持久化失败不自动重提代码。HTTP Mock 已验证请求重叠、future 数量上限、乱序结果归属及会话隔离；取消屏障测试已验证停止补位、在途结果保留、CLI KeyboardInterrupt 退出130及关闭超时保留锁。运行中取消会记录远端可能仍在执行；排队取消标记为没有远端执行。报告发布与终态转换串行化，发布完成后取消返回409。CLI 测试通过 Python interrupt_main 触发，不等同于 Windows 控制台信号验收。
+工作流 `.github/workflows/regression.yml` 在 push、pull_request、workflow_dispatch 运行，包含双 Python 回归、Docker smoke 和真实 C++ E2E 三类、共四个作业。
+JUnit、实际 HTML/JSON 以及脱敏诊断作为制品保留 14 天。pytest 失败时报告步骤和上传仍运行，证据门禁不允许零测试、全跳过或缺失报告冒充通过。
+独立故意失败分支已验证变红且仍归档，随后正常分支恢复绿色。复现命令及 run 链接见 [CI 文档](docs/ci.md)。
 
-## 报告证据（Windows／HTTP Mock 已验收）
+## 数据、状态与边界
 
-报告 schema_version=2 已保留逐例实际源码、题号、seed、源码/profile 哈希、结构化预期与实际观察、错误和尝试次数。任务报告包含 SQLite 保存的题目快照与平台/被测版本；sut_sha 未知时保留 null，不假造版本。HTML 对动态用例及配置文本转义，报告 ID 使用 UUID 防止同秒覆盖。无结构化预期的旧错误用例保留原始 expected 和诊断，不因报告阶段重新校验而丢失报告。双格式先完成渲染，暂存文件 flush/fsync 后逐个原子替换，报告元数据成对事务提交；普通写入/登记失败回滚并清理本次文件。文件系统与 SQLite 不是同一事务，强制终止可能留下未登记孤立文件，不宣称断电原子性。LocalOJ 和报告共用敏感字段与已知秘密替换函数；报告配置采用字段白名单，先从原始响应识别凭据再过滤响应字段。源码被脱敏时标记 source_redacted，保留原始源码哈希；规范哈希、报告标识及判题枚举不会因短密码巧合而改变。错误分布从脱敏结果重建。TaskRepository.report_snapshot 在同一读事务中获取任务、题目、输入和结果；ReportGenerator.generate(snapshot) 返回 ReportArtifact 列表，ID 与数据库报告记录一致。旧 TaskResult 调用保留字典返回。报告包含数据库用例 ID 和 ordinal；未完成快照拒绝生成。HTML/JSON 的 v1 下载与两个旧别名均验证内容、Content-Type、篡改422、缺失404和越界422。
+平台 **SQLite** 保存任务、源码输入、逐例结果和报告索引；被测 C++ OJ 的 **MySQL** 保存用户、题目与判题数据，两者独立。
+一个数据库只允许一个平台执行进程；默认单 Uvicorn worker、一个运行任务、最多20个等待任务、每任务最多16线程。升级前停止进程并备份数据库及报告目录。
 
-## Web 操作与历史（Windows／HTTP Mock 已验收）
+COMPLETED 只表示执行结束；success 还要求 total>0、全部通过、报告完整且哈希匹配。未知判题/协议/传输错误不能因预期为 ERROR 而通过。
+取消停止后续提交并保留在途结果，不保证终止已经提交到远端的程序。异常重启将遗留活动任务标为 INTERRUPTED，不自动重放提交。
+HTML 动态内容转义，前端使用安全文本，报告保留源码/profile/平台/SUT 版本及结构化差异；需要脱敏的源码带标记。
 
-页面已接入 v1 任务创建，支持题目配置、实际题号、策略、精确数量、seed、顺序/并发与1–16线程。顺序固定1线程；题目配置加载失败时禁止提交并支持重试。创建成功清空密码，失败显示HTTP错误，提示使用文本节点。实际浏览器验证见 docs/manual-web-checks.md；列表通过 v1 API 分页并自动刷新，详情显示配置、版本、实际源码、预期/实际和错误。活动任务禁止删除，取消显示处理中；所有动态任务/报告/插件文本使用文本节点。报告链接固定在本站；慢请求完成后才安排下一次轮询。浏览器验证了取消、双格式报告和平台重启后的历史查询。
+本地平台绑定回环地址且没有多用户访问控制；并发重叠验证不等于性能容量报告。C++ 判题器仅使用受控测试模板，不声称可安全执行任意不可信代码。
+仅 LocalOJ 适配器经过真实联调；插件接口不等于已兼容所有 OJ。前端为静态 HTML/JS，无 Vue、Redis、Celery 或分布式调度的交付声明。
 
-## Docker 本机演示
-
-非 root 容器、Mock 和 SQLite／报告持久化已通过实际验收。按 [Docker 安装与验收](docs/docker.md) 从干净提交构建并运行 create／verify；Mock 不能证明真实 C++ 判题。
+排障见 [troubleshooting](docs/troubleshooting.md)，架构与面试说明见 [项目说明](OJ测试开发工具.md)。代码主远端为 Gitee `origin`，GitHub `github` 承载实际 Actions；每一步提交后核对两端 SHA。
