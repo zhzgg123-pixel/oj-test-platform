@@ -1,10 +1,25 @@
 """Local-only test resources, always cleaned up even after failed assertions."""
 from pathlib import Path
+import os
 
 import pytest
 import requests
 
 from tests.mock_oj.server import MockOJServer
+
+
+@pytest.fixture(autouse=True)
+def isolated_platform_environment(monkeypatch, request):
+    """Local tests must never inherit deployment DB paths or credentials.
+
+    Individual configuration tests may explicitly set their own environment.
+    Real E2E keeps its opt-in environment and separate target validation.
+    """
+    if request.node.get_closest_marker('e2e'):
+        return
+    for name in list(os.environ):
+        if name.startswith('OJ_'):
+            monkeypatch.delenv(name, raising=False)
 
 
 def pytest_addoption(parser):

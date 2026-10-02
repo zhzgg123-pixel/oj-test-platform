@@ -1,0 +1,20 @@
+# Allow-list the build context; local credentials, Git and runtime data never enter it.
+**
+!Dockerfile
+!requirements-runtime.lock
+!main.py
+!backend/**
+!config_center/**
+!core_engine/**
+!plugins/**
+!task_center/**
+!storage/**
+!profiles/**
+!frontend/**
+!tests/mock_oj/server.py
+!scripts/smoke_compose.py
+**/__pycache__/**
+**/*.pyc
+**/.env*
+**/*.db*
+**/*.log

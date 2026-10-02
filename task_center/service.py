@@ -3,7 +3,9 @@ from collections import deque
 from dataclasses import asdict
 from datetime import datetime, timezone
 import hashlib
+import os
 from pathlib import Path
+import re
 import subprocess
 import threading
 import time
@@ -30,6 +32,11 @@ class TaskConflictError(RuntimeError):
 
 
 def platform_revision():
+    revision = os.environ.get('OJ_PLATFORM_SHA')
+    if revision and revision != 'unknown':
+        if not re.fullmatch(r'[0-9a-f]{40}', revision):
+            raise ValueError('OJ_PLATFORM_SHA must be a full lowercase Git SHA or unknown')
+        return revision
     try:
         return subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                                        cwd=Path(__file__).resolve().parents[1],

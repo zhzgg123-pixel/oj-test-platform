@@ -1,0 +1,51 @@
+name: oj-test-platform
+services:
+  platform:
+    build:
+      context: .
+      target: platform
+      args:
+        PLATFORM_SHA: ${PLATFORM_SHA:-unknown}
+    ports:
+      - "127.0.0.1:${PLATFORM_PORT:-8000}:8000"
+    environment:
+      OJ_BASE_URL: ${OJ_BASE_URL:-http://mock-oj:8099}
+      OJ_DB: /data/tasks.db
+      OJ_REPORT_DIR: /data/reports
+    volumes:
+      - platform-data:/data
+    init: true
+    stop_grace_period: 45s
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2).read()"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+  mock-oj:
+    profiles: [demo]
+    build:
+      context: .
+      target: mock
+    init: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8099/health', timeout=2).read()"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  smoke:
+    profiles: [demo]
+    build:
+      context: .
+      target: smoke
+    depends_on:
+      platform:
+        condition: service_healthy
+      mock-oj:
+        condition: service_healthy
+    volumes:
+      - smoke-evidence:/evidence
+    command: ["--phase", "verify"]
+volumes:
+  platform-data:
+  smoke-evidence:
