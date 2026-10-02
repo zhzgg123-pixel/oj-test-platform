@@ -874,6 +874,82 @@
         "artifacts/s11a-demo/report.json",
         "artifacts/s11a-evidence.json"
       ]
+    },
+    {
+      "stage": "S11b",
+      "status": "PASS",
+      "scope": "GitHub Python matrix and Docker smoke; real C++ CI remains NOT_RUN",
+      "commit": "4fb18d31f30a51dbcf72b4722009a7e1ecdf25e6",
+      "run_url": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37032626190",
+      "remote_ref": "origin/step/11-ci",
+      "remote_sha_verified": true,
+      "checks": {
+        "regression-python-3.12-4fb18d31f30a51dbcf72b4722009a7e1ecdf25e6": {
+          "tests": 304,
+          "python": "3.12.14",
+          "environment": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+          "html_bytes": 24224,
+          "status": "PASS"
+        },
+        "regression-python-3.14-4fb18d31f30a51dbcf72b4722009a7e1ecdf25e6": {
+          "tests": 304,
+          "python": "3.14.7",
+          "environment": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+          "html_bytes": 24227,
+          "status": "PASS"
+        },
+        "docker": {
+          "status": "PASS",
+          "counts": {
+            "pending": 0,
+            "running": 0,
+            "passed": 6,
+            "failed": 0,
+            "error": 0,
+            "cancelled": 0,
+            "total": 6
+          },
+          "report_sha256": {
+            "json": "1c2406cfbbd9cbd80c634c42b4466bd7be12d8e0f85d1f42d99f739c90103e99",
+            "html": "0d60dafefcb28462d971de6d182dfe0de4f393d2cd076f760eb5750f1f0b73af"
+          }
+        }
+      },
+      "review": "Fixed report collection to run independently with always(), even after Docker verification failure.",
+      "artifacts": [
+        "artifacts/s11b-run.json",
+        "artifacts/s11b-artifact-acceptance.json",
+        "artifacts/ci-37032626190/"
+      ],
+      "limits": "First successful run; deliberate failure and subsequent restored green run recorded separately. HTML source/content and hashes inspected; no browser visual-layout acceptance claim."
+    },
+    {
+      "stage": "S11b-failure-archive",
+      "status": "PASS",
+      "scope": "Intentional failed test remains only on verify/ci-failure-evidence; not merged to main",
+      "commit": "ab584a3f85b11f070758577231cbe83fea9eefae",
+      "run_url": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37032980025",
+      "expected_run_conclusion": "failure",
+      "actual_run_conclusion": "failure",
+      "checks": {
+        "regression-python-3.12-ab584a3f85b11f070758577231cbe83fea9eefae": {
+          "tests": 305,
+          "intentional_failures": 1,
+          "reports": "HTML/JSON retained",
+          "gate": "correctly rejected"
+        },
+        "regression-python-3.14-ab584a3f85b11f070758577231cbe83fea9eefae": {
+          "tests": 305,
+          "intentional_failures": 1,
+          "reports": "HTML/JSON retained",
+          "gate": "correctly rejected"
+        }
+      },
+      "artifacts": [
+        "artifacts/s11b-failure-run.json",
+        "artifacts/s11b-failure-acceptance.json",
+        "artifacts/ci-37032980025/"
+      ]
     }
   ]
 }

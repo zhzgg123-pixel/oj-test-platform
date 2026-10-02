@@ -1,16 +1,18 @@
 # OJ-Test-Platform
 
+[![Platform regression](https://github.com/zhzgg123-pixel/oj-test-platform/actions/workflows/regression.yml/badge.svg)](https://github.com/zhzgg123-pixel/oj-test-platform/actions/workflows/regression.yml)
+
 Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清单逐步完善。
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 Windows／Linux 各 271 条回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**Docker 与 Mock 持久化验收已完成；真实 OJ 联调和 CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 Windows Python 3.12 和 GitHub Linux Python 3.12/3.14 各 304 条非 E2E 回归通过。Web／CLI 已共用 SQLite 持久化任务服务。**Docker 与 Mock 持久化、32 条本地真实 OJ 联调已通过；CI 双版本回归和 Docker smoke 已通过首轮，真实 C++ CI 与失败归档验收仍在推进**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
 ## 开发环境
 
-主验收 Python 3.12，另计划验证 3.14。Windows PowerShell：
+主验收 Python 3.12，GitHub Actions 同时验证 3.14。Windows PowerShell：
 
 ```powershell
 py -3.12 -m venv .venv
@@ -20,7 +22,7 @@ py -3.12 -m venv .venv
 
 测试默认使用随机本地端口，不访问真实 OJ。JUnit 可通过 `--junitxml=artifacts/tests.xml` 导出。手动启动 Mock：`python -m tests.mock_oj.server --port 8099`；固定测试账户 `tester / test-only` 仅用于该 Mock。Mock 不编译或执行 C++，其测试结果不证明真实判题正确。
 
-E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺文件或未选中任何 E2E 测试时非零退出。真实 E2E 测试将在 S10 添加。
+E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺文件或未选中任何 E2E 测试时非零退出。真实 E2E 的隔离启动与验收方式见 [真实 OJ 文档](docs/e2e.md)，CI 证据边界见 [CI 文档](docs/ci.md)。
 
 ## 开发约定
 

@@ -35,3 +35,20 @@ pytest、演示报告生成和证据门禁分别运行，失败不会被后续�
 Docker job 验证真实 HTTP 任务，再重建容器并核对同一任务和报告哈希，归档实际 HTML/JSON 与服务日志。
 
 真实 C++ E2E 作业、远端成功运行和故意失败后的制品归档验证仍待完成；不能仅凭工作流文件存在认定 CI 已验收。
+
+## 首轮远端验收
+
+[运行 37032626190](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37032626190)
+对应提交 `4fb18d31f30a51dbcf72b4722009a7e1ecdf25e6`，与 Gitee 阶段分支读回一致。
+Linux Python 3.12.14、3.14.7 各 304 条回归通过，Docker smoke 六条用例与容器重建持久化通过。
+下载的两个矩阵制品再次通过证据门禁，Docker HTML/JSON 与 smoke 清单哈希一致。
+本地保留在 `artifacts/ci-37032626190/`，摘要在 `docs/evidence/index.json`。
+
+## 失败后保留制品
+
+独立分支 `verify/ci-failure-evidence` 的 `ab584a3f85b11f070758577231cbe83fea9eefae`
+仅新增一条确定失败的测试，不合入 main。
+[运行 37032980025](https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37032980025)
+在两个 Python 版本均产生 305 条用例、1 条预期失败；pytest 和证据门禁步骤均失败，
+演示报告生成和制品上传均成功。下载后核实唯一失败就是验证用例，HTML/JSON 非空且哈希吻合，
+未生成虚假的成功 evidence.json。Docker 独立作业仍通过。
