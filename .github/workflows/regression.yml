@@ -143,5 +143,5 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Stop isolated real OJ
-        if: always()
+        if: always() && hashFiles('.env.e2e') != ''
         run: docker compose --env-file .env.e2e -f compose.e2e.yaml down

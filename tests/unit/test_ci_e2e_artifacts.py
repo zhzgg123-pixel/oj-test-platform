@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -29,5 +30,11 @@ def test_rejects_output_inside_source(tmp_path):
 
 
 def test_missing_settings_fails_closed(tmp_path):
+    source = tmp_path/'artifacts'
+    source.mkdir()
+    (source/'unsafe.log').write_text('unknown-secret')
     with pytest.raises(FileNotFoundError):
-        collect(tmp_path/'artifacts', tmp_path/'publish', tmp_path/'missing')
+        collect(source, tmp_path/'publish', tmp_path/'missing')
+    output = tmp_path/'publish'
+    assert [p.name for p in output.iterdir()] == ['collection.json']
+    assert json.loads((output/'collection.json').read_text())['status'] == 'NOT_RUN'

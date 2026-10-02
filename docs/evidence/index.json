@@ -1061,6 +1061,27 @@
         "artifacts/s12-clean-unit.txt"
       ],
       "limits": "S12 final documentation, requirement audit and release tag still pending."
+    },
+    {
+      "stage": "S12-prepare-failure",
+      "status": "PASS",
+      "scope": "Local fix for failure diagnostics; final remote run pending",
+      "failed_run": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37034861698",
+      "failed_commit": "41d9f20f323c23bf81ab292ae69c22c6e587b21f",
+      "failure": "SUT clone connection reset by peer; no E2E execution; missing settings also prevented artifact upload",
+      "fix": "Publish only fixed NOT_RUN status without private settings, retain nonzero exit; skip cleanup before environment exists",
+      "checks": [
+        "Red test confirms absent status file",
+        "3 collector tests pass",
+        "307 non-E2E passed,32 deselected,1 upstream warning",
+        "Independent review found no code blockers"
+      ],
+      "artifacts": [
+        "artifacts/s12-main-ci-failure.txt",
+        "artifacts/s12-prepare-failure-red.txt",
+        "artifacts/s12-fix-unit.xml",
+        "artifacts/s12-fix-unit.txt"
+      ]
     }
   ]
 }

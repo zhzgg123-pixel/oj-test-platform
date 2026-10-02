@@ -9,6 +9,15 @@ def collect(source, output, settings, docker_logs=False):
     source, output, settings = Path(source).resolve(), Path(output).resolve(), Path(settings)
     if output.is_relative_to(source) or source.is_relative_to(output):
         raise ValueError('evidence input and publication directories must be separate')
+    if not settings.is_file():
+        # Preparation can fail before credentials exist (for example SUT clone).
+        # Publish only a fixed status, never unsanitized input or Docker output.
+        output.mkdir(parents=True, exist_ok=False)
+        (output/'collection.json').write_text(json.dumps({
+            'status': 'NOT_RUN', 'files': [],
+            'reason': 'Private settings unavailable; E2E evidence collection refused. See preparation job logs.',
+        }, indent=2), encoding='utf-8')
+        raise FileNotFoundError('private settings unavailable; only safe status was published')
     values = dict(line.split('=', 1) for line in settings.read_text(encoding='utf-8').splitlines() if line)
     secrets = [value for key, value in values.items() if 'PASSWORD' in key and value]
     if not secrets:
