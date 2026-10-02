@@ -153,6 +153,26 @@
       "scope": "Two profiles via HTTP Mock and subprocess CLI; exact total count, seed reproducibility, source hashes, anonymous session isolation; real C++ OJ NOT_RUN",
       "artifacts": [
         "artifacts/s04b-generation.xml"
+      ],
+      "commit": "47294ab5e262f777bdfc70a9a794b01778d3c222",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S05a",
+      "commit_locator": "feat: add SQLite task repository",
+      "environment": "Windows Python 3.12.10",
+      "red": "13 tests failed because storage module was absent; supplemental tests caught changed expectations accepted and missing report metadata operations",
+      "command": "python -m pytest -q --junitxml=artifacts/s05a-repository.xml",
+      "exit_code": 0,
+      "passed": 187,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "16 isolated SQLite tests: atomic input insert and migration, durable exact source snapshots, UUID identity, idempotent results, guarded transitions, recovery preserving completed results, report metadata, concurrency and cascade deletion. Runtime OS lock, cross-process recovery and Web/CLI integration remain S05b.",
+      "artifacts": [
+        "artifacts/s05a-repository.xml"
       ]
     }
   ]

@@ -27,6 +27,7 @@ class CaseResult:
     start_time: float = 0.0
     end_time: float = 0.0
     observation: Observation | None = None
+    attempt_count: int = 1
 
     @property
     def duration(self) -> float:
