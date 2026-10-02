@@ -388,6 +388,34 @@
       "task_ids": [
         "e562c45b-40f6-45f6-a4b0-2c0790966f84",
         "e2602f6d-5d26-4be3-8748-8e5fa47e1f40"
+      ],
+      "commit": "5dcb03e4fb5969483bce3887786dd979f6a1f741",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S08b",
+      "commit_locator": "feat: expose safe task history and cancellation in web UI",
+      "environment": "Windows Python 3.12.10; Chromium via playwright-cli; delayed HTTP Mock",
+      "red": "Reviewer identified 3s interval invalidating every response on slow lists; browser3500ms response injection reproduced no rows within10s before fix.",
+      "command": "python -m pytest -q --junitxml=artifacts/s08b-web-workflow.xml",
+      "exit_code": 0,
+      "passed": 256,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation",
+        "Browser external font certificate error and favicon404 remain"
+      ],
+      "scope": "DOM text rendering for tasks/cases/errors/reports/plugins, v1 pagination, error counts, active delete disabled, CANCEL_REQUESTED/CANCELLED, full source and structured details, same-origin report links. Browser actual cancellation, HTML/JSON tabs, reload and process-restart history confirmed. Slow-list regression passed in fresh browser after completion-scheduled polling fix.",
+      "review": "Independent read-only review found slow polling response starvation; red/green browser reproduction and narrow rereview confirmed fix. No remaining blockers.",
+      "artifacts": [
+        "artifacts/s08b-web-workflow.xml",
+        "artifacts/s08b-browser/restarted-detail.png",
+        "tests/browser/task-workflow.js",
+        "tests/browser/slow-polling.js"
+      ],
+      "task_ids": [
+        "d9fbbb75-5027-418a-b888-790ffee0f462"
       ]
     }
   ]

@@ -951,115 +951,124 @@ async function checkHealth() {
 }
 
 // ========== Tasks ==========
+function node(tag, text, className) {
+  const element = document.createElement(tag);
+  if (text !== undefined) element.textContent = String(text);
+  if (className) element.className = className;
+  return element;
+}
+function action(text, handler, disabled = false) {
+  const button = node('button', text, 'btn btn-sm btn-outline');
+  button.type = 'button'; button.disabled = disabled;
+  button.addEventListener('click', handler);
+  return button;
+}
+function jsonBlock(title, value) {
+  const section = node('details');
+  section.append(node('summary', title), node('pre', JSON.stringify(value, null, 2), 'logs'));
+  return section;
+}
+const activeStates = new Set(['PENDING', 'RUNNING', 'CANCEL_REQUESTED']);
+let taskOffset = 0;
+let listRequest = 0;
+let detailRequest = 0;
+let openTaskId = null;
 async function refreshTasks() {
+  const ticket = ++listRequest;
   const container = document.getElementById('taskList');
   try {
-    showSkeleton('taskSkeleton');
-    const r = await fetch(API + '/api/tasks');
-    const d = await r.json();
-    hideSkeleton('taskSkeleton');
-    if (!d.tasks || d.tasks.length === 0) {
-      container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg><p>暂无任务，去「新建任务」页面创建一个吧</p></div>';
-      return;
+    const data = await apiJson(`/api/v1/tasks?limit=20&offset=${taskOffset}`);
+    if (ticket !== listRequest) return;
+    const fragment = document.createDocumentFragment();
+    const nav = node('div', undefined, 'report-actions');
+    nav.append(action('上一页', () => { taskOffset = Math.max(0, taskOffset - 20); refreshTasks(); }, taskOffset === 0),
+      node('span', `共 ${data.total} 个任务 · 当前 ${taskOffset + 1}–${taskOffset + data.tasks.length}`),
+      action('下一页', () => { taskOffset += 20; refreshTasks(); }, taskOffset + 20 >= data.total));
+    fragment.append(nav);
+    if (!data.tasks.length) fragment.append(node('p', '暂无任务，去「新建任务」创建一个吧。', 'empty'));
+    const wrap = node('div', undefined, 'table-wrap');
+    const table = node('table'); const head = node('tr');
+    for (const label of ['任务','状态','进度','结果','创建时间','操作']) head.append(node('th', label));
+    table.append(head);
+    for (const task of data.tasks) {
+      const row = node('tr'); row.dataset.taskId = task.id;
+      const title = node('td'); title.append(action(task.name || task.id, () => showDetail(task.id)), node('div', task.id, 'cell-mono'));
+      const state = task.state;
+      const counts = task.counts;
+      const controls = node('td');
+      controls.append(action(state === 'CANCEL_REQUESTED' ? '取消处理中' : '取消', () => cancelTask(task.id), !['PENDING','RUNNING'].includes(state)),
+        action('删除', () => deleteTask(task.id), activeStates.has(state)));
+      row.append(title, node('td', state), node('td', `${task.progress}%`),
+        node('td', `通过 ${counts.passed} / 失败 ${counts.failed} / 错误 ${counts.error} / 取消 ${counts.cancelled}`),
+        node('td', task.created_at || '-'), controls);
+      table.append(row);
     }
-    let html = '<div class="table-wrap"><table><thead><tr><th>ID</th><th>名称</th><th>状态</th><th>进度</th><th>通过率</th><th>创建时间</th><th>操作</th></tr></thead><tbody>';
-    for (const t of d.tasks) {
-      const statusClass = t.status.toLowerCase();
-      const progress = t.progress || 0;
-      const passRate = t.result ? t.result.pass_rate + '%' : '-';
-      html += '<tr>';
-      html += '<td class="cell-mono">' + t.id + '</td>';
-      html += '<td><a href="#" onclick="showDetail(\'' + t.id + '\');return false">' + (t.name || '未命名') + '</a></td>';
-      html += '<td><span class="badge ' + statusClass + '">' + t.status + '</span></td>';
-      html += '<td><div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div><span class="progress-num">' + (t.progress_desc || progress + '%') + '</span></div></td>';
-      const prColor = passRate !== '-' && parseFloat(passRate) >= 80 ? 'var(--success)' : 'var(--danger)';
-      html += '<td style="color:' + prColor + ';font-weight:600">' + passRate + '</td>';
-      html += '<td class="cell-mono" style="color:var(--text-muted)">' + (t.created_at ? t.created_at.slice(0, 19) : '-') + '</td>';
-      html += '<td style="display:flex;gap:6px">';
-      if (t.status === 'RUNNING') {
-        html += '<button class="btn btn-sm btn-danger" onclick="cancelTask(\'' + t.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>取消</button>';
-      }
-      html += '<button class="btn btn-sm btn-outline" onclick="deleteTask(\'' + t.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>删除</button>';
-      html += '</td></tr>';
-    }
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-  } catch (e) {
-    hideSkeleton('taskSkeleton');
-    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>加载失败: ' + e.message + '</p></div>';
+    wrap.append(table); fragment.append(wrap); container.replaceChildren(fragment);
+  } catch (error) {
+    if (ticket === listRequest) container.replaceChildren(node('p', '加载失败: ' + error.message, 'empty'));
   }
 }
-
 async function showDetail(taskId) {
+  openTaskId = taskId;
+  const ticket = ++detailRequest;
+  const modal = document.getElementById('detailModal');
+  modal.classList.add('active');
+  document.getElementById('modalBody').replaceChildren(node('p', '加载中…'));
   try {
-    const r = await fetch(API + '/api/tasks/' + taskId);
-    const d = await r.json();
-    if (!d.task) { flash('任务不存在', 'error'); return; }
-    const t = d.task;
-    document.getElementById('modalTitle').textContent = t.name + ' (' + t.id + ')';
-    let html = '<div class="result-grid">';
-    const stats = [
-      { key: 'pass', label: '通过', icon: ICONS.pass, count: t.result ? t.result.passed : 0 },
-      { key: 'fail', label: '失败', icon: ICONS.fail, count: t.result ? t.result.failed : 0 },
-      { key: 'error', label: '错误', icon: ICONS.alert, count: t.result ? t.result.errors : 0 },
-      { key: 'neutral', label: '总计', icon: ICONS.default, count: t.result ? t.result.total : 0 },
-    ];
-    for (const s of stats) {
-      html += '<div class="result-stat ' + s.key + '">' + s.icon + '<div class="num">' + s.count + '</div><div class="lbl">' + s.label + '</div></div>';
+    const [data, cases] = await Promise.all([
+      apiJson('/api/v1/tasks/' + encodeURIComponent(taskId)),
+      apiJson('/api/v1/tasks/' + encodeURIComponent(taskId) + '/cases')]);
+    if (ticket !== detailRequest || openTaskId !== taskId) return;
+    const task = data.task;
+    document.getElementById('modalTitle').textContent = `${task.name} (${task.id})`;
+    const body = document.createDocumentFragment();
+    body.append(node('p', `状态 ${task.state} · 进度 ${task.progress}%`),
+      action('刷新详情', () => showDetail(taskId)),
+      action('取消任务', () => cancelTask(taskId), !['PENDING','RUNNING'].includes(task.state)),
+      jsonBlock('统计', task.counts), jsonBlock('任务配置和版本', {config:task.config, platform_sha:task.platform_sha, sut_sha:task.sut_sha, profile_sha256:task.profile_sha256}));
+    if (task.error) body.append(jsonBlock('任务错误', task.error));
+    const links = node('div', undefined, 'report-actions');
+    for (const format of ['html','json']) {
+      if (!task.result.report_paths[format]) continue;
+      const link = node('a', '查看 ' + format.toUpperCase() + ' 报告', 'btn btn-sm btn-outline');
+      link.href = `/api/v1/tasks/${encodeURIComponent(taskId)}/reports/${format}`;
+      link.target = '_blank'; link.rel = 'noopener'; links.append(link);
     }
-    html += '</div>';
-    if (t.error_message) html += '<div class="logs" style="color:var(--danger)">' + t.error_message + '</div>';
-    if (t.result && t.result.report_paths) {
-      const rp = t.result.report_paths;
-      html += '<div class="report-actions">';
-      if (rp.html) html += '<a href="/' + rp.html + '" target="_blank" class="btn btn-sm btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 查看 HTML 报告</a>';
-      if (rp.json) html += '<a href="/' + rp.json + '" target="_blank" class="btn btn-sm btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> 查看 JSON 报告</a>';
-      html += '</div>';
+    body.append(links);
+    for (const saved of cases.cases) {
+      const section = node('details'); section.dataset.caseId = saved.id;
+      section.append(node('summary', `${saved.ordinal + 1}. ${saved.input.desc} — ${saved.state}`),
+        node('pre', saved.input.code, 'logs'),
+        jsonBlock('输入与复现信息', saved.input),
+        jsonBlock('预期', saved.expectation), jsonBlock('实际与错误', saved.result));
+      body.append(section);
     }
-    if (t.result && t.result.details && t.result.details.length) {
-      html += '<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>用例</th><th>期望</th><th>实际</th><th>结果</th></tr></thead><tbody>';
-      for (const r of t.result.details) {
-        html += '<tr><td>' + (r.case_id || r.description) + '</td><td class="cell-mono">' + r.expected + '</td><td class="cell-mono">' + r.actual + '</td><td>' + (r.passed ? ICONS.check + ' ' : ICONS.x + ' ') + r.status + '</td></tr>';
-      }
-      html += '</tbody></table></div>';
-    }
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('detailModal').classList.add('active');
-  } catch (e) {
-    flash('加载详情失败: ' + e.message, 'error');
+    document.getElementById('modalBody').replaceChildren(body);
+  } catch (error) {
+    if (ticket === detailRequest) document.getElementById('modalBody').replaceChildren(node('p', '加载详情失败: ' + error.message));
   }
 }
-
 function closeModal() {
+  openTaskId = null; ++detailRequest;
   document.getElementById('detailModal').classList.remove('active');
 }
-
-// Close modal on overlay click
-document.getElementById('detailModal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-// Close modal on Escape
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeModal();
-});
-
+document.getElementById('detailModal').addEventListener('click', function(event) { if (event.target === this) closeModal(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeModal(); });
 async function cancelTask(id) {
-  if (!confirm('确定要取消任务吗？')) return;
   try {
-    await fetch(API + '/api/tasks/' + id + '/cancel', { method: 'POST' });
-    flash('任务已取消');
-    refreshTasks();
-  } catch (e) { flash('取消失败: ' + e.message, 'error'); }
+    await apiJson('/api/v1/tasks/' + encodeURIComponent(id) + '/cancel', {method:'POST'});
+    flash('取消请求已接受，等待在途请求结束。');
+    await refreshTasks();
+    if (openTaskId === id) await showDetail(id);
+  } catch (error) { flash('取消失败: ' + error.message, 'error'); }
 }
-
 async function deleteTask(id) {
-  if (!confirm('确定要删除任务吗？')) return;
+  if (!confirm('删除该任务及其报告？')) return;
   try {
-    await fetch(API + '/api/tasks/' + id, { method: 'DELETE' });
-    flash('任务已删除');
-    refreshTasks();
-  } catch (e) { flash('删除失败: ' + e.message, 'error'); }
+    await apiJson('/api/v1/tasks/' + encodeURIComponent(id), {method:'DELETE'});
+    if (openTaskId === id) closeModal();
+    taskOffset = 0; await refreshTasks(); flash('任务已删除');
+  } catch (error) { flash('删除失败: ' + error.message, 'error'); }
 }
 
 // ========== Create Task ==========
@@ -1138,7 +1147,7 @@ document.getElementById('createForm').addEventListener('submit', async (event) =
     if (!task.task_id) throw new Error('响应缺少任务 ID');
     document.getElementById('f_password').value = '';
     flash('任务已创建：' + task.task_id);
-    document.querySelector('[data-tab="tasks"]').click();
+    taskOffset = 0; document.querySelector('[data-tab="tasks"]').click();
   } catch (error) { flash('创建失败: ' + error.message, 'error'); }
   finally {
     creatingTask = false;
@@ -1151,45 +1160,29 @@ document.getElementById('createForm').addEventListener('submit', async (event) =
 async function refreshReports() {
   const container = document.getElementById('reportList');
   try {
-    showSkeleton('reportSkeleton');
-    const r = await fetch(API + '/api/reports');
-    const d = await r.json();
-    hideSkeleton('reportSkeleton');
-    if (!d.reports || d.reports.length === 0) {
-      container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>暂无报告，运行任务后自动生成</p></div>';
-      return;
+    const data = await apiJson('/api/reports');
+    const fragment = document.createDocumentFragment();
+    if (!data.reports.length) fragment.append(node('p', '暂无报告', 'empty'));
+    for (const report of data.reports) {
+      const row = node('p');
+      row.append(node('span', `${report.filename} · ${report.size == null ? '不可用' : (report.size / 1024).toFixed(1) + ' KB'} `));
+      if (report.available !== false) {
+        const link = node('a', '查看报告', 'btn btn-sm btn-outline');
+        link.href = '/api/reports/' + encodeURIComponent(report.filename);
+        link.target = '_blank'; link.rel = 'noopener'; row.append(link);
+      }
+      fragment.append(row);
     }
-    let html = '<div class="table-wrap"><table><thead><tr><th>文件名</th><th>格式</th><th>大小</th><th>操作</th></tr></thead><tbody>';
-    for (const rp of d.reports) {
-      html += '<tr><td class="cell-mono">' + rp.filename + '</td><td><span class="badge" style="background:var(--primary-subtle);color:var(--primary)">' + rp.format + '</span></td><td>' + (rp.size / 1024).toFixed(1) + ' KB</td>';
-      html += '<td><a href="/' + rp.path.replace(/\\/g, '/') + '" target="_blank" class="btn btn-sm btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 查看</a></td></tr>';
-    }
-    html += '</tbody></table></div>';
-    container.innerHTML = html;
-  } catch (e) {
-    hideSkeleton('reportSkeleton');
-    container.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>加载失败: ' + e.message + '</p></div>';
-  }
+    container.replaceChildren(fragment);
+  } catch (error) { container.replaceChildren(node('p', '加载失败: ' + error.message)); }
 }
-
 // ========== Plugins ==========
 async function refreshPlugins() {
+  const container = document.getElementById('pluginList');
   try {
-    const r = await fetch(API + '/api/plugins');
-    const d = await r.json();
-    if (!d.plugins || d.plugins.length === 0) {
-      document.getElementById('pluginList').innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg><p>未加载到插件</p></div>';
-      return;
-    }
-    let html = '<div class="plugin-list">';
-    for (const p of d.plugins) {
-      html += '<div class="plugin-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> ' + p.name + ' <span class="plugin-class">(' + p.class + ')</span></div>';
-    }
-    html += '</div>';
-    document.getElementById('pluginList').innerHTML = html;
-  } catch {
-    document.getElementById('pluginList').innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>加载失败</p></div>';
-  }
+    const data = await apiJson('/api/plugins');
+    container.replaceChildren(...data.plugins.map(plugin => node('p', `${plugin.name} (${plugin.class})`, 'plugin-chip')));
+  } catch (error) { container.replaceChildren(node('p', '加载失败: ' + error.message)); }
 }
 
 async function testConnection() {
@@ -1197,7 +1190,7 @@ async function testConnection() {
   el.className = 'conn-result';
   el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" class="spin"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg> 测试中...';
   try {
-    const r = await fetch(API + '/api/plugins/test', {
+    const d = await apiJson('/api/plugins/test', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -1207,12 +1200,11 @@ async function testConnection() {
         password: document.getElementById('t_password').value,
       }),
     });
-    const d = await r.json();
     el.className = 'conn-result ' + (d.success ? 'success' : 'error');
-    el.innerHTML = (d.success ? ICONS.check + ' ' : ICONS.x + ' ') + d.message;
+    el.textContent = d.message;
   } catch (e) {
     el.className = 'conn-result error';
-    el.innerHTML = ICONS.x + ' 测试失败: ' + e.message;
+    el.textContent = '测试失败: ' + e.message;
   }
 }
 
@@ -1230,8 +1222,11 @@ async function refreshConfig() {
 // ========== Polling ==========
 let pollTimer = null;
 function startPolling() {
-  refreshTasks();
-  pollTimer = setInterval(refreshTasks, 3000);
+  async function poll() {
+    await refreshTasks();
+    pollTimer = setTimeout(poll, 3000);
+  }
+  poll();
 }
 
 // ========== Spinner CSS (injected for loading state) ==========
