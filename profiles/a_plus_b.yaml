@@ -1,0 +1,76 @@
+schema_version: 1
+id: a_plus_b
+title: A plus B
+language: cpp
+time_limit_ms: 1000
+memory_limit_kb: 65536
+fixtures:
+- stdin: '1 2
+
+    '
+  stdout: '3
+
+    '
+- stdin: '-1 1
+
+    '
+  stdout: '0
+
+    '
+- stdin: '0 0
+
+    '
+  stdout: '0
+
+    '
+strategies:
+  random:
+    templates:
+    - name: ac
+      path: templates/a_plus_b/ac.cpp
+      expected_verdict: AC
+    - name: wa
+      path: templates/a_plus_b/wa.cpp
+      expected_verdict: WA
+    - name: ce
+      path: templates/a_plus_b/ce.cpp
+      expected_verdict: CE
+    - name: tle
+      path: templates/a_plus_b/tle.cpp
+      expected_verdict: TLE
+    - name: re
+      path: templates/a_plus_b/re.cpp
+      expected_verdict: RE
+  boundary:
+    templates:
+    - name: ce
+      path: templates/a_plus_b/ce.cpp
+      expected_verdict: CE
+    - name: tle
+      path: templates/a_plus_b/tle.cpp
+      expected_verdict: TLE
+    - name: re
+      path: templates/a_plus_b/re.cpp
+      expected_verdict: RE
+  rule:
+    scenarios:
+    - name: unauthenticated
+      path: templates/a_plus_b/ac.cpp
+      auth_mode: anonymous
+      expectation:
+        kind: http_error
+        http_status: 401
+    - name: missing_problem
+      path: templates/a_plus_b/ac.cpp
+      request_overrides:
+        problem_id: '2147483647'
+      expectation:
+        kind: business_error
+        http_status: 200
+        error_code: PROBLEM_NOT_FOUND
+    - name: empty_source
+      source_code: ''
+      expectation:
+        kind: business_error
+        http_status: 200
+        error_code: CODE_REQUIRED

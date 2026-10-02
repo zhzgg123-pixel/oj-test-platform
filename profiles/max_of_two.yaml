@@ -1,0 +1,76 @@
+schema_version: 1
+id: max_of_two
+title: Maximum of two integers
+language: cpp
+time_limit_ms: 1000
+memory_limit_kb: 65536
+fixtures:
+- stdin: '1 2
+
+    '
+  stdout: '2
+
+    '
+- stdin: '-3 -7
+
+    '
+  stdout: '-3
+
+    '
+- stdin: '0 0
+
+    '
+  stdout: '0
+
+    '
+strategies:
+  random:
+    templates:
+    - name: ac
+      path: templates/max_of_two/ac.cpp
+      expected_verdict: AC
+    - name: wa
+      path: templates/max_of_two/wa.cpp
+      expected_verdict: WA
+    - name: ce
+      path: templates/max_of_two/ce.cpp
+      expected_verdict: CE
+    - name: tle
+      path: templates/max_of_two/tle.cpp
+      expected_verdict: TLE
+    - name: re
+      path: templates/max_of_two/re.cpp
+      expected_verdict: RE
+  boundary:
+    templates:
+    - name: ce
+      path: templates/max_of_two/ce.cpp
+      expected_verdict: CE
+    - name: tle
+      path: templates/max_of_two/tle.cpp
+      expected_verdict: TLE
+    - name: re
+      path: templates/max_of_two/re.cpp
+      expected_verdict: RE
+  rule:
+    scenarios:
+    - name: unauthenticated
+      path: templates/max_of_two/ac.cpp
+      auth_mode: anonymous
+      expectation:
+        kind: http_error
+        http_status: 401
+    - name: missing_problem
+      path: templates/max_of_two/ac.cpp
+      request_overrides:
+        problem_id: '2147483647'
+      expectation:
+        kind: business_error
+        http_status: 200
+        error_code: PROBLEM_NOT_FOUND
+    - name: empty_source
+      source_code: ''
+      expectation:
+        kind: business_error
+        http_status: 200
+        error_code: CODE_REQUIRED

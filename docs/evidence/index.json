@@ -116,6 +116,23 @@
       "scope": "HTTP API and subprocess CLI, invalid requests before network, file/env defaults, secret-free outputs, lifespan and reload, preserved report download",
       "artifacts": [
         "artifacts/s03b-entrypoints.xml"
+      ],
+      "commit": "5d5b8fe6cb07fcfcbf0b2e5203e394b14ec7ca38",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S04a",
+      "commit_locator": "feat: add validated problem profiles and replay snapshots",
+      "environment": "Windows Python 3.12.10",
+      "red": "16 profile tests failed before loader and profiles existed",
+      "command": "python -m pytest -q --junitxml=artifacts/s04a-profiles.xml",
+      "exit_code": 0,
+      "passed": 160,
+      "failed": 0,
+      "scope": "YAML/schema/path validation, two distinct problem template sets, source hashes and snapshots; execution wiring follows in S04b",
+      "artifacts": [
+        "artifacts/s04a-profiles.xml"
       ]
     }
   ]
