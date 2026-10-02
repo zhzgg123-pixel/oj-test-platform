@@ -6,7 +6,10 @@ OJ 系统适配器抽象基类 - BaseOJAdapter
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core_engine.contracts import Observation
 
 
 @dataclass
@@ -38,6 +41,7 @@ class SubmitResult:
     submit_id: Optional[str] = None
     message: str = ""
     judge_result: Optional[JudgeResult] = None
+    observation: Optional['Observation'] = None
 
 
 @dataclass

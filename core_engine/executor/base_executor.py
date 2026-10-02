@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 from core_engine.case_engine.base_generator import TestCase
 from plugins.base_adapter import BaseOJAdapter, JudgeResult
+from core_engine.contracts import Observation
 
 
 @dataclass
@@ -25,6 +26,7 @@ class CaseResult:
     error_message: str = ""
     start_time: float = 0.0
     end_time: float = 0.0
+    observation: Observation | None = None
 
     @property
     def duration(self) -> float:

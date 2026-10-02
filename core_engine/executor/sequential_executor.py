@@ -17,6 +17,8 @@ from typing import Optional
 from core_engine.case_engine.base_generator import TestCase
 from core_engine.executor.base_executor import BaseExecutor, CaseResult, TaskResult
 from plugins.base_adapter import BaseOJAdapter
+from core_engine.contracts import Expectation, Observation
+from core_engine.assertion.judge_oracle import JudgeOracle
 
 logger = logging.getLogger("oj.executor")
 
@@ -82,66 +84,55 @@ class SequentialExecutor(BaseExecutor):
         return result
 
     def _execute_one(self, case: TestCase, adapter: BaseOJAdapter) -> CaseResult:
-        """执行单个测试用例"""
+        """Validate intent first, then interpret only an explicit observation."""
         cr = CaseResult(case=case, status="RUNNING", start_time=time.time())
-
         try:
-            # 1. 提交代码
-            submit_r = adapter.submit_code(case.problem_id, case.code, case.lang)
-            if not submit_r.success:
-                if case.expected_status == "ERROR":
-                    cr.status = "PASSED"
-                    cr.actual_status = "ERROR"
+            try:
+                expected = case.expectation or Expectation(kind="verdict", verdict=case.expected_status)
+            except ValueError:
+                cr.status = "ERROR"
+                cr.error_message = "Invalid expectation: replace generic ERROR with a specific HTTP or business expectation"
+                return cr
+
+            submitted = adapter.submit_code(case.problem_id, case.code, case.lang)
+            observed = submitted.observation
+            judge = submitted.judge_result
+            if observed is None:
+                if not submitted.success:
+                    observed = Observation(kind="protocol_error", error_code="UNSTRUCTURED_SUBMISSION_FAILURE")
                 else:
-                    cr.status = "ERROR"
-                    cr.error_message = f"提交失败: {submit_r.message}"
-                cr.end_time = time.time()
-                return cr
-
-            # 2. 获取判题结果（优先从提交响应中直接获取，否则轮询）
-            judge_r = submit_r.judge_result
-            if judge_r is None:
-                # 异步判题模式：需要提交后轮询
-                judge_r = self._poll(adapter, submit_r.submit_id)
-
-            if not judge_r:
-                if case.expected_status == "ERROR":
-                    cr.status = "PASSED"
-                    cr.actual_status = "ERROR"
-                    cr.end_time = time.time()
-                    return cr
-                cr.status = "ERROR"
-                cr.error_message = f"判题超时（{self.poll_timeout}s）"
-                cr.end_time = time.time()
-                return cr
-
-            # 3. 记录结果
-            cr.judge_result = judge_r
-            cr.actual_status = judge_r.status
-
-            # 特殊语义：expected_status="ERROR" 表示预期失败
-            if case.expected_status == "ERROR":
-                cr.status = "PASSED"  # 触发了错误 → 期望的结果
-            else:
-                cr.status = "PASSED" if judge_r.status == case.expected_status else "FAILED"
-
-        except Exception as e:
-            if case.expected_status == "ERROR":
-                cr.status = "PASSED"
-                cr.actual_status = "ERROR"
-            else:
-                cr.status = "ERROR"
-                cr.error_message = str(e)
-
-        cr.end_time = time.time()
+                    if judge is None and submitted.submit_id:
+                        judge = self._poll(adapter, submitted.submit_id)
+                    if judge is None:
+                        observed = Observation(kind="protocol_error", error_code=(
+                            "POLL_TIMEOUT" if submitted.submit_id else "MISSING_VERDICT"))
+                    else:
+                        try:
+                            observed = Observation(kind="verdict", verdict=judge.status, evidence=vars(judge))
+                        except ValueError:
+                            observed = Observation(kind="protocol_error", error_code="UNKNOWN_VERDICT")
+            cr.judge_result = judge
+            cr.observation = observed
+            cr.actual_status = observed.verdict or observed.error_code or f"HTTP_{observed.http_status}"
+            assertion = JudgeOracle().evaluate(expected, observed)
+            cr.status = assertion.status
+            if assertion.status != "PASSED":
+                cr.error_message = assertion.reason
+        except Exception as exc:
+            # A platform exception is never proof that the expected OJ rejection occurred.
+            cr.status = "ERROR"
+            cr.error_message = f"Execution failed: {type(exc).__name__}"
+            cr.observation = Observation(kind="protocol_error", error_code="EXECUTION_ERROR")
+        finally:
+            cr.end_time = time.time()
         return cr
 
     def _poll(self, adapter: BaseOJAdapter, submit_id: str) -> Optional[JudgeResult]:
         """轮询判题结果"""
         from plugins.base_adapter import JudgeResult
 
-        deadline = time.time() + self.poll_timeout
-        while time.time() < deadline:
+        deadline = time.monotonic() + self.poll_timeout
+        while time.monotonic() < deadline:
             result = adapter.get_judge_result(submit_id)
             if result is not None:
                 return result

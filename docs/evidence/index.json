@@ -7,7 +7,11 @@
       "remote_ref": "origin/main",
       "remote_sha_verified": true,
       "environment": "Windows, Python 3.12.10",
-      "checks": ["source hashes unchanged", "compileall exit 0", "pip check exit 0"],
+      "checks": [
+        "source hashes unchanged",
+        "compileall exit 0",
+        "pip check exit 0"
+      ],
       "business_regression": "NOT_RUN at baseline"
     },
     {
@@ -20,7 +24,28 @@
       "passed": 15,
       "failed": 0,
       "evidence_scope": "Local HTTP contract harness and existing Adapter; not real C++ execution",
-      "artifacts": ["artifacts/s01.xml", "artifacts/s01-clean-environment.xml"]
+      "artifacts": [
+        "artifacts/s01.xml",
+        "artifacts/s01-clean-environment.xml"
+      ],
+      "commit": "2e0129c5602ccdcb4a89115825a6c08bc711d2aa",
+      "remote_ref": "origin/main",
+      "remote_sha_verified": true
+    },
+    {
+      "stage": "S02a",
+      "commit_locator": "fix: centralize explicit verdict assertions",
+      "environment": "Windows, Python 3.12.10",
+      "red": "48 failures: CE incorrectly satisfied WA, generic ERROR passed actual AC, missing explicit contracts",
+      "command": "python -m pytest -q --junitxml=artifacts/s02a.xml",
+      "exit_code": 0,
+      "passed": 63,
+      "failed": 0,
+      "additional_check": "fresh process imports LocalOJAdapter and create_app successfully",
+      "scope": "Oracle, typed expectation/observation validation, sequential execution integration; Adapter response parsing and retry policy remain S02b",
+      "artifacts": [
+        "artifacts/s02a.xml"
+      ]
     }
   ]
 }

@@ -6,6 +6,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from core_engine.contracts import Expectation
 
 
 @dataclass
@@ -21,6 +22,7 @@ class TestCase:
     tags: list[str] = field(default_factory=list)
     priority: str = "P1"
     metadata: dict = field(default_factory=dict)
+    expectation: Expectation | None = None
 
 
 class BaseGenerator(ABC):
