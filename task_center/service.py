@@ -215,8 +215,8 @@ class TaskService:
         return result
 
     def _write_reports(self, task_id):
-        # The task UUID prevents timestamp collisions; S07 adds the full evidence schema
-        # and atomic output. Both current formats are generated from persisted results.
+        # Both formats use persisted results. Publish complete files before registering
+        # the pair; a crash between these systems can leave unregistered orphan files.
         directory = (self.report_root / task_id).resolve()
         if not directory.is_relative_to(self.report_root):
             raise ValueError('report path escapes report root')
@@ -224,10 +224,21 @@ class TaskService:
         context = {key: getattr(task, key) for key in
                    ('id', 'name', 'profile', 'profile_sha256', 'platform_sha', 'sut_sha', 'created_at', 'started_at')}
         info = ReportGenerator(directory).generate(self.task_result(task_id), task.config, task_context=context)
-        for format in ('json', 'html'):
-            path = Path(info[f'{format}_path']).resolve()
-            self.repo.save_report(task_id, format, path.relative_to(self.report_root).as_posix(),
-                                  hashlib.sha256(path.read_bytes()).hexdigest())
+        paths = [Path(info[f'{format}_path']).resolve() for format in ('json', 'html')]
+        if any(not path.is_relative_to(directory) for path in paths):
+            raise ValueError('generated report escapes task directory')
+        try:
+            artifacts = [dict(format=format, relative_path=path.relative_to(self.report_root).as_posix(),
+                              sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+                         for format, path in zip(('json', 'html'), paths)]
+            self.repo.save_reports(task_id, artifacts)
+        except BaseException:
+            for path in paths:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass  # Unregistered files cannot be served through task metadata.
+            raise
 
     def success(self, task_id):
         task = self.get(task_id)

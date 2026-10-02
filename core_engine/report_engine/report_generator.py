@@ -51,16 +51,29 @@ class ReportGenerator:
         data = self._build_data(report_id, task_result, task_config)
         data['task'] = task_context or {}
 
-        # JSON 报告
         json_path = self.output_dir / f"{report_id}.json"
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-
-        # HTML 报告
         html_path = self.output_dir / f"{report_id}.html"
-        html = self._render_html(data)
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(html)
+        # Render both before touching disk; readers never observe a partial file.
+        contents = (json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False), self._render_html(data))
+        paths = (json_path, html_path)
+        staged = [path.with_suffix(path.suffix + '.tmp') for path in paths]
+        published = []
+        try:
+            for path, content in zip(staged, contents):
+                with path.open('x', encoding='utf-8') as stream:
+                    stream.write(content)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+            for source, target in zip(staged, paths):
+                os.replace(source, target)
+                published.append(target)
+        except BaseException:
+            for path in [*staged, *published]:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    logger.warning('Report cleanup failed for %s', path.name)
+            raise
 
         logger.info("[Report] 报告已生成: %s, %s", json_path, html_path)
 

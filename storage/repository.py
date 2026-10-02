@@ -227,22 +227,33 @@ class TaskRepository:
             db.execute('DELETE FROM tasks WHERE id=?', (task_id,))
 
     def save_report(self, task_id, format, relative_path, sha256):
+        with self.database.connection(write=True) as db:
+            return self._save_report(db, task_id, format, relative_path, sha256)
+
+    def save_reports(self, task_id, artifacts):
+        """Register the required JSON/HTML pair in one transaction."""
+        artifacts = list(artifacts)
+        if len(artifacts) != 2 or {a['format'] for a in artifacts} != {'json', 'html'}:
+            raise ValueError('both report formats required')
+        with self.database.connection(write=True) as db:
+            return [self._save_report(db, task_id, **artifact) for artifact in artifacts]
+
+    def _save_report(self, db, task_id, format, relative_path, sha256):
         path = PurePosixPath(relative_path)
         if (format not in {'html', 'json'} or not relative_path or path.is_absolute()
                 or '..' in path.parts or ':' in relative_path or chr(92) in relative_path
                 or not re.fullmatch(r'[0-9a-f]{64}', sha256)):
             raise ValueError('invalid report metadata')
-        with self.database.connection(write=True) as db:
-            self._required(db, task_id)
-            existing = db.execute('SELECT * FROM reports WHERE task_id=? AND format=?', (task_id, format)).fetchone()
-            if existing:
-                if existing['relative_path'] != relative_path or existing['sha256'] != sha256:
-                    raise ValueError('conflicting report already saved')
-                return existing['id']
-            report_id = str(uuid4())
-            db.execute('INSERT INTO reports VALUES (?,?,?,?,?,?)',
-                       (report_id, task_id, format, relative_path, sha256, time.time()))
-            return report_id
+        self._required(db, task_id)
+        existing = db.execute('SELECT * FROM reports WHERE task_id=? AND format=?', (task_id, format)).fetchone()
+        if existing:
+            if existing['relative_path'] != relative_path or existing['sha256'] != sha256:
+                raise ValueError('conflicting report already saved')
+            return existing['id']
+        report_id = str(uuid4())
+        db.execute('INSERT INTO reports VALUES (?,?,?,?,?,?)',
+                   (report_id, task_id, format, relative_path, sha256, time.time()))
+        return report_id
 
     def get_report(self, task_id, format):
         if format not in {'html', 'json'}:

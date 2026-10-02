@@ -1,5 +1,6 @@
 import hashlib
 import json
+import pytest
 from pathlib import Path
 
 from core_engine.case_engine.base_generator import TestCase as Case
@@ -71,3 +72,25 @@ def test_invalid_legacy_expectation_still_produces_error_report(tmp_path):
     assert data['all_cases'][0]['expectation'] is None
     assert data['all_cases'][0]['expected'] == 'ERROR'
     assert data['all_cases'][0]['error'] == 'INVALID_EXPECTATION'
+
+
+def test_render_failure_leaves_no_partial_report(tmp_path, monkeypatch):
+    def fail(data):
+        raise OSError('render failed')
+    monkeypatch.setattr(ReportGenerator, '_render_html', staticmethod(fail))
+    with pytest.raises(OSError):
+        ReportGenerator(tmp_path).generate(failed_result())
+    assert not list(tmp_path.iterdir())
+
+
+def test_second_file_publication_failure_removes_first_and_staging(tmp_path, monkeypatch):
+    from core_engine.report_engine import report_generator
+    original = report_generator.os.replace
+    def fail_html(source, target):
+        if str(target).endswith('.html'):
+            raise OSError('publish failed')
+        original(source, target)
+    monkeypatch.setattr(report_generator.os, 'replace', fail_html)
+    with pytest.raises(OSError):
+        ReportGenerator(tmp_path).generate(failed_result())
+    assert not list(tmp_path.iterdir())

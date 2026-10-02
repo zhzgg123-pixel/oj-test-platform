@@ -297,6 +297,27 @@
       "review": "Independent read-only reviewer identified legacy invalid-expectation crash; fixed with red/green test and narrow rereview, no remaining blockers. Standalone storage-first import verified after eliminating a circular dependency.",
       "artifacts": [
         "artifacts/s07a-report-inputs.xml"
+      ],
+      "commit": "a952f73998165d606c6b0ee85cb36f1c63549636",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S07b",
+      "commit_locator": "fix: publish report files and metadata consistently",
+      "environment": "Windows Python 3.12.10",
+      "red": "3 injected failures reproduced partial JSON after render failure, absence of staged publication, and first metadata row surviving second insert rejection.",
+      "command": "python -m pytest -q --junitxml=artifacts/s07b-report-publication.xml",
+      "exit_code": 0,
+      "passed": 243,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation"
+      ],
+      "scope": "Render-before-write, exclusive staging with flush/fsync and per-file replace, cleanup on ordinary file/registration failure, JSON/HTML metadata transaction rollback, preservation of executed cases on report failure. Hard termination may leave unregistered orphans; no cross-system power-loss atomicity claim. Shared redaction, complete snapshot API and download checks remain S07 work.",
+      "review": "Independent read-only review found no blockers; no independent test rerun.",
+      "artifacts": [
+        "artifacts/s07b-report-publication.xml"
       ]
     }
   ]

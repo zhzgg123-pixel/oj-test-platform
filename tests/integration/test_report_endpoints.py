@@ -31,3 +31,22 @@ def test_durable_report_contains_saved_inputs_and_version_context(tmp_path, mock
         assert 'test-only' not in html
     finally:
         service.close()
+
+
+def test_second_report_registration_failure_rolls_back_pair(tmp_path, mock_oj):
+    repo = TaskRepository(tmp_path / 'tasks.db')
+    service = TaskService(repo, report_root=tmp_path / 'reports')
+    service.start()
+    try:
+        with repo.database.connection(write=True) as db:
+            db.execute("CREATE TRIGGER reject_html BEFORE INSERT ON reports WHEN NEW.format='html' BEGIN SELECT RAISE(ABORT, 'injected'); END")
+        task_id = service.create(TaskConfig(base_url=mock_oj.base_url, case_count=3),
+                                 ExecutionCredentials(username='tester', password='test-only'))
+        task = service.wait(task_id, 10)
+        assert task.state == 'FAILED' and task.error['stage'] == 'report'
+        assert task.counts['passed'] == 3
+        assert repo.list_reports(task_id) == []
+        assert not list((tmp_path / 'reports').rglob('*.json'))
+        assert not list((tmp_path / 'reports').rglob('*.html'))
+    finally:
+        service.close()
