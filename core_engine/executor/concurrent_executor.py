@@ -39,7 +39,7 @@ class ConcurrentExecutor(BaseExecutor):
                     cr = unsubmitted(case, 'CANCELLED', 'CANCELLED_BEFORE_SUBMISSION')
                 else:
                     # This adapter is fresh and owned by this invocation, including anonymous cases.
-                    cr = self._seq._execute_one(case, adapter, anonymous_isolated=True)
+                    cr = self._seq._execute_one(case, adapter, anonymous_isolated=True, cancel_event=cancel)
         except Exception:
             cr = unsubmitted(case, 'ERROR', 'WORKER_SETUP_ERROR')
             cr.observation = Observation(kind='protocol_error', error_code='WORKER_SETUP_ERROR')

@@ -33,7 +33,7 @@ def platform_revision():
     try:
         return subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                                        cwd=Path(__file__).resolve().parents[1],
-                                       timeout=5, stderr=subprocess.DEVNULL, text=True).strip()
+                                       timeout=5, stdin=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True).strip()
     except (OSError, subprocess.SubprocessError):
         return 'unknown'
 
@@ -175,8 +175,9 @@ class TaskService:
                 SequentialExecutor(config.poll_interval, config.poll_timeout).execute(
                     cases, adapter, login_required=False, **callbacks)
             stage = 'report'
-            self._write_reports(task_id)
             with self._condition:
+                # Publish the cancellation snapshot and terminal state together.
+                self._write_reports(task_id)
                 state = self.get(task_id).state
                 self.repo.transition(task_id, {state}, 'CANCELLED' if state == 'CANCEL_REQUESTED' else 'COMPLETED')
         except Exception as exc:
@@ -192,7 +193,7 @@ class TaskService:
                 cancelled = state == 'CANCEL_REQUESTED'
                 self.repo.finish_unstarted_cases(task_id, 'CANCELLED' if cancelled else 'ERROR', reason)
                 self.repo.transition(task_id, {state}, 'CANCELLED' if cancelled else 'FAILED',
-                                     error={'stage': stage, 'reason': reason})
+                                     error={**(self.get(task_id).error or {}), 'stage': stage, 'reason': reason})
 
     def task_result(self, task_id):
         task = self.get(task_id)
@@ -209,6 +210,7 @@ class TaskService:
                 actual_status=(actual.verdict or actual.error_code or f'HTTP_{actual.http_status}') if actual else '',
                 error_message=row['reason'], start_time=row['started_at'], end_time=row['finished_at'],
                 attempt_count=row['attempt_count']))
+        result.remote_execution_may_continue = bool((task.error or {}).get('remote_execution_may_continue'))
         result.end_time = task.finished_at or max((r.end_time for r in result.case_results), default=result.start_time)
         return result
 
@@ -251,18 +253,25 @@ class TaskService:
                 if task_id in self._pending:
                     self._pending.remove(task_id)
                 self.repo.finish_unstarted_cases(task_id, 'CANCELLED', 'CANCELLED_BEFORE_SUBMISSION')
-                self.repo.transition(task_id, {'PENDING'}, 'CANCELLED')
+                self.repo.transition(task_id, {'PENDING'}, 'CANCELLED',
+                                     error={'stage': 'cancel', 'reason': 'USER_CANCELLED',
+                                            'remote_execution_may_continue': False})
                 # The consumer may already have taken this pending task. It will observe
                 # the terminal state before using credentials or opening a connection.
                 self._credentials.pop(task_id, None)
                 if task_id != self._active:
                     self._events.pop(task_id, None)
             elif task.state == 'RUNNING':
-                self.repo.transition(task_id, {'RUNNING'}, 'CANCEL_REQUESTED')
+                self.repo.transition(task_id, {'RUNNING'}, 'CANCEL_REQUESTED',
+                                     error={'stage': 'cancel', 'reason': 'USER_CANCELLED',
+                                            'remote_execution_may_continue': True})
             self._condition.notify_all()
 
     def close(self, timeout=30):
-        with self._condition:
+        deadline = time.monotonic() + max(0, timeout)
+        if not self._condition.acquire(timeout=max(0, deadline - time.monotonic())):
+            raise TimeoutError('task shutdown deadline exceeded; execution lock retained')
+        try:
             if self.closed:
                 return
             self._closing = True
@@ -271,8 +280,10 @@ class TaskService:
             if self._active is not None and self.get(self._active).state in ACTIVE:
                 self.cancel(self._active)
             self._condition.notify_all()
+        finally:
+            self._condition.release()
         if self._thread is not None:
-            self._thread.join(timeout=timeout)
+            self._thread.join(timeout=max(0, deadline - time.monotonic()))
             if self._thread.is_alive():
                 raise TimeoutError('task shutdown deadline exceeded; execution lock retained')
         with self._condition:

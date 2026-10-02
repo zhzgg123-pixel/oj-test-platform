@@ -75,13 +75,14 @@ class SequentialExecutor(BaseExecutor):
 
         # 逐个执行
         for case in cases:
+            if cancel_event is None or not cancel_event.is_set():
+                on_start(case)
             if cancel_event is not None and cancel_event.is_set():
                 now = time.time()
                 cr = CaseResult(case=case, status='CANCELLED', error_message='CANCELLED_BEFORE_SUBMISSION',
                                 start_time=now, end_time=now, attempt_count=0)
             else:
-                on_start(case)
-                cr = self._execute_one(case, adapter)
+                cr = self._execute_one(case, adapter, cancel_event=cancel_event)
             on_result(cr)
             result.case_results.append(cr)
             if cr.passed:
@@ -96,7 +97,7 @@ class SequentialExecutor(BaseExecutor):
         result.end_time = time.time()
         return result
 
-    def _execute_one(self, case: TestCase, adapter: BaseOJAdapter, *, anonymous_isolated=False) -> CaseResult:
+    def _execute_one(self, case: TestCase, adapter: BaseOJAdapter, *, anonymous_isolated=False, cancel_event=None) -> CaseResult:
         """Validate intent first, then interpret only an explicit observation."""
         cr = CaseResult(case=case, status="RUNNING", start_time=time.time(), attempt_count=0)
         anonymous_adapter = None
@@ -111,6 +112,10 @@ class SequentialExecutor(BaseExecutor):
             if case.auth_mode == "anonymous" and not anonymous_isolated:
                 anonymous_adapter = type(adapter)(base_url=adapter.base_url, timeout=adapter.timeout)
                 adapter = anonymous_adapter
+            if cancel_event is not None and cancel_event.is_set():
+                cr.status = 'CANCELLED'
+                cr.error_message = 'CANCELLED_BEFORE_SUBMISSION'
+                return cr
             cr.attempt_count = 1
             submitted = adapter.submit_code(case.problem_id, case.code, case.lang)
             observed = submitted.observation

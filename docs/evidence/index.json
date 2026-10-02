@@ -255,7 +255,28 @@
       "artifacts": [
         "artifacts/s06a-concurrency.xml"
       ],
-      "review": "Independent read-only review found a remaining plugin-test caller lacking close; fixed with four red/green regression scenarios and narrow reviewer verification. No blocking S06a findings."
+      "review": "Independent read-only review found a remaining plugin-test caller lacking close; fixed with four red/green regression scenarios and narrow reviewer verification. No blocking S06a findings.",
+      "commit": "35bad0ed14f6a37947315e7085851627427d00c1",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S06b",
+      "commit_locator": "fix: make cancellation stop further submissions",
+      "environment": "Windows Python 3.12.10",
+      "red": "Missing cancellation metadata; admission callback allowed late submission; report publication race reproduced with deterministic barrier. CLI harness exposed inherited stdin in git revision lookup.",
+      "command": "python -m pytest -q --junitxml=artifacts/s06b-cancellation.xml",
+      "exit_code": 0,
+      "passed": 235,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient httpx deprecation"
+      ],
+      "scope": "9 cancellation tests: sequential/concurrent no refill, pending zero attempts, inflight timeout preservation, shutdown lock retention, public progress and terminal conflict, child CLI interrupt_main exit130, admission cancellation, serialized report publication. HTTP Mock only; not OS console-signal or remote process termination proof.",
+      "review": "Independent reviewer found report/cancellation snapshot race; fixed by serialized publication and terminal transition plus bounded initial shutdown lock acquisition. Narrow rereview found no blockers; reviewer did not independently rerun tests.",
+      "artifacts": [
+        "artifacts/s06b-cancellation.xml"
+      ]
     }
   ]
 }

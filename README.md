@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 226 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**并发取消的完整验收、完整证据报告、Docker、真实 OJ 联调和 CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 235 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**完整证据报告、Docker、真实 OJ 联调和 CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -62,7 +62,7 @@ Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源�
 
 数据库优先级：`--db` > `OJ_DB` > YAML `test.db_path` > `runtime/tasks.db`；报告目录同理使用 `--report-dir`／`OJ_REPORT_DIR`／`test.report_dir`。相对路径相对于启动工作目录。Web 正占用某个数据库时，同库 CLI 退出 2；可指定 `--db runtime/ci.db` 独立执行。更换报告根目录后需同时迁移相应报告文件。
 
-启动时只有获得操作系统运行锁的进程会恢复遗留活动任务：状态改为 INTERRUPTED，已完成结果保留，未完成用例为 ERROR／PROCESS_INTERRUPTED；不会自动重放提交。Windows 已有真实子进程验证，POSIX 分支待 Docker／CI 验证。顺序取消保留在途结果、停止后续提交；关闭超时保留运行锁。COMPLETED 表示执行结束，只有所有用例通过且两种报告可读、哈希匹配才有 `success=true`。
+启动时只有获得操作系统运行锁的进程会恢复遗留活动任务：状态改为 INTERRUPTED，已完成结果保留，未完成用例为 ERROR／PROCESS_INTERRUPTED；不会自动重放提交。Windows 已有真实子进程验证，POSIX 分支待 Docker／CI 验证。顺序和并发取消保留在途结果、停止后续提交；关闭超时保留运行锁。COMPLETED 表示执行结束，只有所有用例通过且两种报告可读、哈希匹配才有 `success=true`。
 
 | 接口 | 用途 |
 |---|---|
@@ -80,4 +80,4 @@ Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源�
 
 并发调度最多保留 max_workers 个在途 future，完成后才补充新用例。每个执行用例创建并关闭自己的 Adapter／Session，认证用例独立登录，匿名用例不带 Cookie；因此登录请求数会随认证用例数增加。旧 create_instance 工厂也不再缓存实例，调用者负责 close。
 
-顺序和并发复用同一单用例判定逻辑及逐条持久化回调。结果按输入顺序输出；任一 worker 登录／准备失败会停止补位并明确失败，持久化失败不自动重提代码。HTTP Mock 已验证请求重叠、future 数量上限、乱序结果归属及会话隔离；并发取消的完整边界与远端仍可能执行的提示在 S06b 继续验收。
+顺序和并发复用同一单用例判定逻辑及逐条持久化回调。结果按输入顺序输出；任一 worker 登录／准备失败会停止补位并明确失败，持久化失败不自动重提代码。HTTP Mock 已验证请求重叠、future 数量上限、乱序结果归属及会话隔离；取消屏障测试已验证停止补位、在途结果保留、CLI KeyboardInterrupt 退出130及关闭超时保留锁。运行中取消会记录远端可能仍在执行；排队取消标记为没有远端执行。报告发布与终态转换串行化，发布完成后取消返回409。CLI 测试通过 Python interrupt_main 触发，不等同于 Windows 控制台信号验收。

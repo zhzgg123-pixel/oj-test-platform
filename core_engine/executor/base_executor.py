@@ -66,6 +66,7 @@ class TaskResult:
     end_time: float = 0.0
     failure_stage: str = ''
     failure_reason: str = ''
+    remote_execution_may_continue: bool = False
 
     @property
     def pass_rate(self) -> float:

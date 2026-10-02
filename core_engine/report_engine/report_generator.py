@@ -92,11 +92,13 @@ class ReportGenerator:
         return {
             "report_id": report_id,
             "generated_at": datetime.now().isoformat(),
+            "remote_execution_may_continue": tr.remote_execution_may_continue,
             "summary": {
                 "total": tr.total,
                 "passed": tr.passed,
                 "failed": tr.failed,
                 "error": tr.error,
+                "cancelled": tr.cancelled,
                 "pass_rate": tr.pass_rate,
                 "duration": tr.duration,
                 "status_distribution": dist,
@@ -120,6 +122,8 @@ class ReportGenerator:
     def _render_html(data: dict) -> str:
         """渲染 HTML 报告"""
         s = data["summary"]
+        cancellation_note = ("远端程序可能仍在执行；取消仅停止平台继续提交。"
+                             if data.get("remote_execution_may_continue") else "")
         rows = ""
         for cr in data["all_cases"]:
             icon = (
@@ -155,6 +159,7 @@ th {{background:#fafafa;font-weight:600;color:#555;}}
 tr:hover {{background:#f8f9fa;}}
 </style></head><body><div class="container">
 <h1>🔍 OJ 测试报告</h1>
+<p>{cancellation_note}</p>
 <p>报告ID: {data['report_id']} | {data['generated_at']}</p>
 <div class="pass-rate">通过率 {s['pass_rate']}%</div>
 <div class="summary">
@@ -162,6 +167,7 @@ tr:hover {{background:#f8f9fa;}}
 <div class="stat passed"><div class="number">{s['passed']}</div><div class="label">通过</div></div>
 <div class="stat failed"><div class="number">{s['failed']}</div><div class="label">失败</div></div>
 <div class="stat error"><div class="number">{s['error']}</div><div class="label">错误</div></div>
+<div class="stat cancelled"><div class="number">{s.get('cancelled', 0)}</div><div class="label">取消</div></div>
 </div>
 <p>耗时: {s['duration']}s</p>
 <table><thead><tr><th>用例ID</th><th>描述</th><th>预期</th><th>实际</th><th>状态</th><th>耗时</th></tr></thead><tbody>{rows}</tbody></table>
