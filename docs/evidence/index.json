@@ -652,6 +652,50 @@
         "artifacts/s10b1-fixtures-a.json",
         "artifacts/s10b1-fixtures-b.json"
       ]
+    },
+    {
+      "stage": "S10b2-SUT-fix",
+      "status": "PARTIAL",
+      "scope": "Real E2E exposed SUT failure; isolated C++ fix verified by unit suites and pushed; fixed SUT not yet selected by platform",
+      "old_sut_sha": "cede96af7ea62f07bc1fbc0c466658b771b57777",
+      "fixed_sut_sha": "fa5ffe317f136f29039bc66e734fc687c4531e10",
+      "remote": "https://gitee.com/chasing-dreams-zhuo/cpp-oj.git",
+      "remote_ref": "refs/heads/fix/judge-child-resource-accounting",
+      "remote_sha_verified": true,
+      "real_failure": {
+        "profile": "a_plus_b",
+        "mode": "sequential",
+        "expected": "AC",
+        "observed": "MLE",
+        "memory_kb": 69272,
+        "memory_limit_kb": 65536,
+        "task_id": "98a51bc2-557d-43e7-a2a3-e71fbf192ae1"
+      },
+      "root_cause": "RUSAGE_CHILDREN accumulates compiler and other reaped-child CPU/RSS. Use wait4 on exact execution PID. Also enforce millisecond CPU budget after normal exit.",
+      "verification": {
+        "resource_regression_red_exit": 1,
+        "cpu_budget_regression_red_exit": 1,
+        "judge_suite_passed": 47,
+        "submit_suite_passed": 15,
+        "judge_exit": 0,
+        "submit_exit": 0,
+        "independent_reviews": "PASS"
+      },
+      "environment": "Linux amd64, Debian Bookworm, GCC 12.2, GoogleTest 1.12.1, UID 10001, 2 CPU/1 GiB, network none",
+      "artifacts": [
+        "artifacts/s10b2-matrix.xml",
+        "artifacts/s10b2-matrix.txt",
+        "artifacts/e2e/3d87548e333447eebd37e0b9ce198c4b",
+        "artifacts/s10b2-cpp-resource-red.xml",
+        "artifacts/s10b2-cpp-cpu-red.xml",
+        "artifacts/s10b2-cpp-judge-green.xml",
+        "artifacts/s10b2-cpp-submit-green.xml"
+      ],
+      "remaining": [
+        "Explicitly migrate dedicated test environment to fixed SUT SHA while preserving old checkout/data/evidence",
+        "Run full real verdict matrix, batch concurrency, auth and cancellation boundaries",
+        "Complete S11 actual GitHub Actions and S12 acceptance"
+      ]
     }
   ]
 }

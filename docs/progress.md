@@ -14,6 +14,6 @@
 | S07 报告 | PASS (Windows/Mock) | S07a 报告输入、结构化差异、任务/profile/版本上下文、HTML转义、UUID防覆盖；S07b双格式暂存发布及元数据事务、失败清理；S07c共享脱敏、配置白名单、源码脱敏标记、规范哈希/判题保留及错误统计脱敏；S07d单事务完整快照、Artifact接口及下载验收；254测试通过。独立复审发现的泄漏/证据破坏边界均已修复。强制终止的孤立文件风险明确保留；无断电原子性声明 |
 | S08 Web | PASS (Windows/Mock/browser) | S08a 创建表单接通profile/seed/mode/workers、202 Location、配置失败重试及安全提示；实际浏览器创建顺序/并发并核对持久化，256测试通过。S08b安全文本、分页、完整详情、取消中状态、报告链接、重启历史及慢响应轮询均完成浏览器验证和独立复审 |
 | S09 Docker | PASS (Windows/Linux/HTTP Mock) | `59ee684` 已同步 main 和阶段分支并核对远端；两平台各271测试通过（1条上游警告）；非root镜像、版本门禁、6条HTTP任务、双报告下载、重启及down/up后同一任务和报告哈希不变，Linux锁与恢复回归通过。真实C++不在此结论内 |
-| S10 真实联调 | S10a、S10b1 PASS；判题矩阵 NOT_RUN | 固定 C++ SHA、专用 MySQL/内部网络、非 root 判题器与本机入口已验证；两题 seed/cleanup 真实创建、内容读回、跨运行隔离、重复清理及数据库零残留通过。292 条回归通过（1 条上游警告），审查发现的超时创建晚提交边界已修复。S10b2 五状态及批量并发尚未执行 |
+| S10 真实联调 | S10a、S10b1 PASS；S10b2 旧版本 FAIL，修复版待联调 | 两题 seed/cleanup 及292条平台回归通过。真实 AC 在旧 C++ `cede96a` 被误判 MLE，已定位累计子进程资源统计；另修复毫秒 CPU 预算漏判。C++ 修复 `fa5ffe3` 已推送独立 Gitee 分支，47条judge + 15条submit单测通过、独立复审通过。平台固定版本切换、五状态矩阵及批量并发仍待完成 |
 | S11 GitHub Actions | NOT_RUN | 已创建私有仓库 https://github.com/zhzgg123-pixel/oj-test-platform；main 已同步 S09，Actions 权限已启用；尚无工作流运行证据 |
 | S12 总体验收 | NOT_RUN | |
