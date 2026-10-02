@@ -173,6 +173,26 @@
       "scope": "16 isolated SQLite tests: atomic input insert and migration, durable exact source snapshots, UUID identity, idempotent results, guarded transitions, recovery preserving completed results, report metadata, concurrency and cascade deletion. Runtime OS lock, cross-process recovery and Web/CLI integration remain S05b.",
       "artifacts": [
         "artifacts/s05a-repository.xml"
+      ],
+      "commit": "548d952b7dd4bd99b3ef0a657ae0bab53c518114",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S05b-runtime-lock",
+      "commit_locator": "feat: guard task recovery with an OS execution lock",
+      "environment": "Windows Python 3.12.10",
+      "red": "4 failures before task_center.runtime existed, including two real child-process scenarios",
+      "command": "python -m pytest -q --junitxml=artifacts/s05b-runtime-lock.xml",
+      "exit_code": 0,
+      "passed": 191,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "Windows OS lock tested across real processes; second owner refused before migration/recovery while history readable; graceful exit and forced termination release lock; failed initialization releases lock. POSIX runtime verification and service entrypoint wiring remain pending.",
+      "artifacts": [
+        "artifacts/s05b-runtime-lock.xml"
       ]
     }
   ]
