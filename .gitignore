@@ -10,6 +10,7 @@ htmlcov/
 runtime/
 reports/
 artifacts/
+ci-e2e-artifacts/
 logs/
 *.db
 *.db-*

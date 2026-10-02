@@ -950,6 +950,25 @@
         "artifacts/s11b-failure-acceptance.json",
         "artifacts/ci-37032980025/"
       ]
+    },
+    {
+      "stage": "S11c-tooling",
+      "status": "PASS",
+      "scope": "Local real-E2E CI wiring and redacted artifact collector; remote run still pending",
+      "base_commit": "77ae90199a0bb8fc7b4eae7617e54df8b557aed2",
+      "checks": [
+        "3 collector tests passed after recorded missing-module red test",
+        "307 non-E2E tests passed, 32 deselected",
+        "Collector processed 163 existing real-E2E text artifacts and Docker diagnostics; exact generated credential scan passed; no DB copied",
+        "Independent review: no material blockers"
+      ],
+      "restored_green_run": "https://github.com/zhzgg123-pixel/oj-test-platform/actions/runs/37033319446",
+      "artifacts": [
+        "artifacts/s11c-unit.xml",
+        "artifacts/s11c-unit.txt",
+        "artifacts/s11c-collector-red.txt",
+        "artifacts/s11c-collected/collection.json"
+      ]
     }
   ]
 }

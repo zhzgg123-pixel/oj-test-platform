@@ -94,3 +94,54 @@ jobs:
       - name: Stop isolated demo
         if: always()
         run: docker compose down
+
+  real-cpp-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GIT_TERMINAL_PROMPT: '0'
+      OJ_PLATFORM_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - name: Install locked dependencies
+        run: |
+          python -m pip install -r requirements-dev.lock
+          python -m pip check
+      - name: Prepare pinned public SUT and isolated credentials
+        run: |
+          python -m scripts.prepare_e2e
+          python - <<'PY'
+          from pathlib import Path
+          for line in Path('.env.e2e').read_text().splitlines():
+              key, value = line.split('=', 1)
+              if 'PASSWORD' in key:
+                  print('::add-mask::' + value)
+          PY
+      - name: Build and start real compiler and MySQL
+        run: |
+          docker compose --env-file .env.e2e -f compose.e2e.yaml build
+          docker compose --env-file .env.e2e -f compose.e2e.yaml up -d --wait
+          python -m scripts.e2e_environment --evidence artifacts/e2e-environment.json
+      - name: Run real verdict, concurrency and cancellation matrix
+        run: python -m pytest tests/e2e -m e2e --run-e2e --e2e-config config_center/e2e.example.yaml -q --junitxml=artifacts/e2e-junit.xml
+      - name: Collect redacted E2E reports and diagnostics
+        if: always()
+        run: python -m scripts.ci_e2e_artifacts --docker-logs
+      - name: Archive real E2E evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: real-cpp-e2e-${{ github.sha }}
+          path: ci-e2e-artifacts/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop isolated real OJ
+        if: always()
+        run: docker compose --env-file .env.e2e -f compose.e2e.yaml down
