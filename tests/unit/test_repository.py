@@ -148,7 +148,7 @@ def test_database_settings_and_newer_schema_rejection(repo):
         assert db.execute('PRAGMA foreign_keys').fetchone()[0] == 1
         assert db.execute('PRAGMA journal_mode').fetchone()[0] == 'wal'
         assert db.execute('PRAGMA busy_timeout').fetchone()[0] >= 1000
-        assert db.execute('PRAGMA user_version').fetchone()[0] == 1
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 2
         db.execute('PRAGMA user_version=999')
     with pytest.raises(ValueError, match='version'):
         repo.initialize()

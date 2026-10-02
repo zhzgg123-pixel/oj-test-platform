@@ -4,7 +4,7 @@ Python / FastAPI OJ 自动化测试平台，正在按已审计的简历能力清
 
 ## 当前状态
 
-当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 204 条本地回归通过（1 条上游弃用提示）。**SQLite、完整并发入口、Docker、CI 尚未验收完成**。
+当前已导入脱敏源码并建立 pytest + HTTP Mock 测试底座，保留生成器、Adapter、顺序执行、Web/CLI 和基础报告。已修复判定误通过、业务错误解析和自动重复提交；已接通 YAML 题目配置及三类策略，目前 214 条本地回归通过（1 条上游弃用提示）。Web／CLI 已共用 SQLite 持久化任务服务。**完整并发入口、完整证据报告、Docker、真实 OJ 联调和 CI 尚未验收完成**。
 
 原始文档 `OJ测试开发工具.md` 是历史资料，其中完成度描述不作为当前能力证明。请以 [进度](docs/progress.md)、[原始审计](docs/initial-audit.md) 和对应测试证据为准。
 
@@ -42,11 +42,11 @@ E2E 必须显式指定 `--run-e2e --e2e-config <隔离环境配置文件>`；缺
 
 CLI 密码通过 `OJ_PASSWORD` 传入，用户名通过 `OJ_USERNAME` 或 `--username` 传入；不再接受 `--password`。不要把真实凭据提交到仓库。
 
-任务参数优先级为显式 CLI 参数 > `OJ_*` 环境变量 > 指定 YAML > 默认值。支持 `--problem-id`（兼容 `--problem`）、`--case-count`（兼容 `--count`）、`--seed`、`--timeout`、`--poll-timeout` 和 `--report-dir`。并发模式在 S06 接通前明确拒绝，不会静默变成顺序。
+任务参数优先级为显式 CLI 参数 > `OJ_*` 环境变量 > 指定 YAML > 默认值。支持 `--problem-id`（兼容 `--problem`）、`--case-count`（兼容 `--count`）、`--seed`、`--timeout`、`--poll-timeout` 、`--db` 和 `--report-dir`。并发模式在 S06 接通前明确拒绝，不会静默变成顺序。
 
-CLI 退出码：0 表示至少执行一条且全部通过、报告生成成功；1 表示运行或用例失败；2 表示参数／配置错误；130 表示 Ctrl+C。`--output` 和报告只保存非秘密任务配置。
+CLI 退出码：0 表示至少执行一条且全部通过、报告生成成功；1 表示运行或用例失败；2 表示参数／配置错误或同库执行锁冲突；130 表示 Ctrl+C。`--output` 和报告只保存非秘密任务配置。
 
-API 的任务创建成功返回 202，非法配置返回 422。配置重载使用启动时同一个文件；重载失败保留原配置，报告目录变更需重启。导入 `main` 或 `backend.app` 不创建运行目录。
+API 的任务创建成功返回 202，非法配置返回 422。配置重载使用启动时同一个文件；重载失败保留原配置，报告目录或数据库路径变更需重启。导入 `main` 或 `backend.app` 不创建运行目录。
 
 ## YAML 题目与可复现生成
 
@@ -54,12 +54,24 @@ API 的任务创建成功返回 202，非法配置返回 422。配置重载使�
 
 `--case-count` 是任务总用例数，按所选 random／boundary／rule 策略均分并交错执行；相同配置与 seed 生成相同提交源码。随机策略抽样程序模板，边界策略覆盖 CE／TLE／RE 模板，规则策略覆盖匿名、缺失题目和空源码。具体语义见 [profiles](profiles/README.md)。匿名用例使用独立无登录会话。
 
-`GET /api/v1/profiles` 列出可用题目；生成接口返回实际源码、源码哈希、profile 哈希和 seed。快照的持久化与完整报告分别在 S05／S07 接入。
+`GET /api/v1/profiles` 列出可用题目；生成接口返回实际源码、源码哈希、profile 哈希和 seed。快照已持久化，完整证据报告仍待 S07。
 
-## 存储层进度
+## 持久化任务与历史
 
-SQLite repository 已加入，保存任务配置、题目快照、实际提交源码、逐条结果和报告元数据。输入原子写入，结果幂等保存，使用外键、WAL 与短事务；不接收登录凭据。相同逻辑用例在不同任务中使用不同 UUID。
+Web／CLI 共用 TaskService，先原子保存配置、题目快照和实际源码，再进入单消费者队列；最多等待 20 个任务，满队列返回 429。结果逐条保存，凭据仅在内存中保留到任务终态。SQLite 使用外键、WAL、短事务和版本迁移；版本 2 新增任务名称并保留版本 1 历史。已有数据升级前应停止服务并备份数据库。
 
-当前 Web／CLI 尚未切换到持久化任务服务。运行锁及恢复已通过 Windows 子进程测试；TaskService 已通过 HTTP Mock 生命周期测试，Web／CLI 和历史接口仍待 S05b 后续接线，不能据此认定现有 Web 任务已支持重启恢复。repository 的恢复方法仅供取得运行锁后的服务调用。
+数据库优先级：`--db` > `OJ_DB` > YAML `test.db_path` > `runtime/tasks.db`；报告目录同理使用 `--report-dir`／`OJ_REPORT_DIR`／`test.report_dir`。相对路径相对于启动工作目录。Web 正占用某个数据库时，同库 CLI 退出 2；可指定 `--db runtime/ci.db` 独立执行。更换报告根目录后需同时迁移相应报告文件。
 
-内部 TaskService 先保存完整输入再入队，单消费者最多等待 20 个任务，逐条落库并在终态清除临时凭据。顺序取消保留在途结果、停止后续提交；关闭超时不会释放运行锁。服务根据执行、报告是否成功区分任务状态，全通过且两种报告存在并匹配哈希才认定 success。现有公开入口仍未迁移，勿把服务层测试等同于 Web／CLI 验收。
+启动时只有获得操作系统运行锁的进程会恢复遗留活动任务：状态改为 INTERRUPTED，已完成结果保留，未完成用例为 ERROR／PROCESS_INTERRUPTED；不会自动重放提交。Windows 已有真实子进程验证，POSIX 分支待 Docker／CI 验证。顺序取消保留在途结果、停止后续提交；关闭超时保留运行锁。COMPLETED 表示执行结束，只有所有用例通过且两种报告可读、哈希匹配才有 `success=true`。
+
+| 接口 | 用途 |
+|---|---|
+| `POST /api/v1/tasks` | 保存并排队，202；参数与原 `/api/tasks` 一致 |
+| `GET /api/v1/tasks?limit=20&offset=0` | 持久化历史，limit 1–100 |
+| `GET /api/v1/tasks/{id}` | 任务配置、状态、统计和成功判定 |
+| `GET /api/v1/tasks/{id}/cases` | 实际源码、预期、哈希和逐条结果 |
+| `GET /api/v1/tasks/{id}/reports/{html或json}` | 按数据库关联安全读取报告 |
+| `POST /api/v1/tasks/{id}/cancel` | 接受活动任务取消；终态 409，不存在 404 |
+| `DELETE /api/v1/tasks/{id}` | 仅删除终态任务及其报告；活动任务 409 |
+
+旧 `/api/tasks` 委托同一服务，保留旧页面需要的时间字符串和返回字段。报告别名 `/reports/{任务UUID}.json`／`.html` 及已有平铺报告仍可读取。CLI 的 `--output` 返回 task_id，该任务之后可通过 Web 查询。

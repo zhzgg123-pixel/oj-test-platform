@@ -38,7 +38,7 @@ def test_unknown_profile_fails_before_login(mock_oj):
 def test_profile_list_and_generation_api(tmp_path, mock_oj):
     path = tmp_path / 'app.yaml'
     path.write_text(json.dumps({'oj': {'base_url': mock_oj.base_url},
-                                'test': {'report_dir': str(tmp_path / 'reports')}}), encoding='utf-8')
+                                'test': {'db_path': str(tmp_path / 'history.db'), 'report_dir': str(tmp_path / 'reports')}}), encoding='utf-8')
     with TestClient(create_app(config_path=path)) as client:
         listing = client.get('/api/v1/profiles')
         assert listing.status_code == 200

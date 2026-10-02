@@ -1,207 +1,65 @@
-"""
-任务管理器 - TaskManager
+"""Legacy task facade. All execution and history delegate to TaskService."""
+from config_center.models import TaskConfig
+from storage.repository import TaskRepository
+from task_center.models import TaskStatus
+from task_center.service import TaskService
 
-文档规范：
-- create_task(config) -> Task
-- start_task(task_id) -> bool
-- get_task(task_id) -> Task
-- list_tasks(limit=20) -> list[Task]
 
-使用内存存储（MVP 阶段），后续可替换为数据库/Redis。
-"""
+class TaskView:
+    def __init__(self, service, task_id):
+        self.service, self.id = service, task_id
 
-from __future__ import annotations
-import uuid
-import logging
-import threading
-import time
-from config_center.models import ExecutionCredentials
-from datetime import datetime
-from typing import Optional
+    @property
+    def status(self):
+        return TaskStatus(self.service.get(self.id).state)
 
-from task_center.models import Task, TaskConfig, TaskStatus
-from core_engine.executor.task_executor import TaskExecutor
-from core_engine.report_engine.report_generator import ReportGenerator
+    @property
+    def config(self):
+        return TaskConfig.model_validate(self.service.get(self.id).config)
 
-logger = logging.getLogger("oj.task_manager")
+    @property
+    def name(self):
+        return self.service.get(self.id).name
+
+    def to_dict(self):
+        return self.service.serialize_task(self.id)
 
 
 class TaskManager:
-    """任务管理器 - 创建 / 调度 / 状态管理"""
+    def __init__(self, report_dir='reports', db_path='runtime/tasks.db', service=None):
+        self.service = service or TaskService(TaskRepository(db_path), report_root=report_dir)
+        if service is None:
+            self.service.start()
 
-    def __init__(self, report_dir: str = "reports"):
-        self._tasks: dict[str, Task] = {}
-        self._credentials = {}
-        self._threads = []
-        self.closed = False
-        self._lock = threading.Lock()
-        self._executor = TaskExecutor()
-        self._report_gen = ReportGenerator(output_dir=report_dir)
+    @property
+    def closed(self):
+        return self.service.closed
 
-    def create_task(self, config: TaskConfig | dict, credentials=None, name=None) -> Task:
-        """
-        创建新任务
+    def create_task(self, config, credentials=None, name=None):
+        # Durable create also enqueues atomically. start_task remains an idempotent facade.
+        task_id = self.service.create(config, credentials, name=name or '测试任务')
+        return TaskView(self.service, task_id)
 
-        Args:
-            config: 任务配置（TaskConfig 对象或字典）
+    def start_task(self, task_id):
+        return self.get_task(task_id) is not None
 
-        Returns:
-            Task: 创建的任务
-        """
-        if self.closed:
-            raise RuntimeError("task manager is closed")
-        if isinstance(config, dict):
-            config = TaskConfig(**config)
-
-        task_id = f"task-{uuid.uuid4().hex[:8]}"
-        task = Task(
-            id=task_id,
-            name=name or f"测试任务-{task_id[-6:]}",
-            config=config,
-            status=TaskStatus.PENDING,
-        )
-
-        with self._lock:
-            self._tasks[task_id] = task
-            self._credentials[task_id] = credentials or ExecutionCredentials()
-
-        logger.info("[TaskManager] 任务已创建: %s", task_id)
-        return task
-
-    def start_task(self, task_id: str) -> bool:
-        """
-        异步启动任务
-
-        Args:
-            task_id: 任务 ID
-
-        Returns:
-            bool: 是否成功启动
-        """
-        with self._lock:
-            task = self._tasks.get(task_id)
-            if self.closed or not task or task.status != TaskStatus.PENDING:
-                return False
-            task.status = TaskStatus.RUNNING
-            task.started_at = datetime.now().isoformat()  # type: ignore
-
-        thread = threading.Thread(
-            target=self._run,
-            args=(task_id,),
-            daemon=True,
-        )
-        self._threads.append(thread)
-        thread.start()
-        return True
-
-    def get_task(self, task_id: str) -> Optional[Task]:
-        """获取任务详情"""
-        return self._tasks.get(task_id)
-
-    def list_tasks(self, limit: int = 20) -> list[Task]:
-        """列出最近任务（按创建时间倒序）"""
-        with self._lock:
-            tasks = sorted(
-                self._tasks.values(),
-                key=lambda t: t.created_at,
-                reverse=True,
-            )[:limit]
-            return tasks
-
-    def cancel_task(self, task_id: str) -> bool:
-        """取消任务"""
-        with self._lock:
-            task = self._tasks.get(task_id)
-            if not task or task.status in (
-                TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED
-            ):
-                return False
-            task.status = TaskStatus.CANCELLED
-            task.updated_at = datetime.now().isoformat()
-        return True
-
-    def delete_task(self, task_id: str) -> bool:
-        """删除任务"""
-        with self._lock:
-            if task_id not in self._tasks:
-                return False
-            del self._tasks[task_id]
-        return True
-
-    def _run(self, task_id: str) -> None:
-        """后台执行任务"""
-        with self._lock:
-            task = self._tasks.get(task_id)
-            if not task:
-                return
-
+    def get_task(self, task_id):
         try:
-            # 执行测试（TaskExecutor 内部完成 用例生成 + 执行）
-            task_result = self._executor.run_task(
-                task_id=task_id,
-                config=task.config,
-                credentials=self._credentials.get(task_id),
-            )
+            self.service.get(task_id)
+            return TaskView(self.service, task_id)
+        except KeyError:
+            return None
 
-            # 生成报告
-            report_info = self._report_gen.generate(
-                task_result=task_result,
-                task_config=task.config.to_dict(),
-            )
+    def list_tasks(self, limit=20, offset=0):
+        return [TaskView(self.service, task.id) for task in self.service.repo.list_tasks(limit, offset)]
 
-            # 更新任务状态
-            with self._lock:
-                task = self._tasks.get(task_id)
-                if not task:
-                    return
-                task.status = TaskStatus.COMPLETED
-                task.progress = 100
-                task.progress_desc = "完成"
-                task.result = {
-                    "total": task_result.total,
-                    "passed": task_result.passed,
-                    "failed": task_result.failed,
-                    "error": task_result.error,
-                    "pass_rate": task_result.pass_rate,
-                    "duration": task_result.duration,
-                    "report_paths": {
-                        "json": report_info["json_path"],
-                        "html": report_info["html_path"],
-                    },
-                    "details": [
-                        {
-                            "case_id": cr.case.id,
-                            "description": cr.case.desc,
-                            "expected": cr.case.expected_status,
-                            "actual": cr.actual_status,
-                            "status": cr.status,
-                            "passed": cr.passed,
-                            "elapsed": cr.duration,
-                        }
-                        for cr in task_result.case_results
-                    ],
-                }
-                task.updated_at = datetime.now().isoformat()
+    def cancel_task(self, task_id):
+        self.service.cancel(task_id)
+        return True
 
-        except Exception as e:
-            logger.exception("[TaskManager] 任务执行异常: %s", task_id)
-            with self._lock:
-                task = self._tasks.get(task_id)
-                if not task:
-                    return
-                task.status = TaskStatus.FAILED
-                task.error_message = str(e)
-                task.updated_at = datetime.now().isoformat()
-
-        finally:
-            with self._lock:
-                self._credentials.pop(task_id, None)
+    def delete_task(self, task_id):
+        self.service.delete(task_id)
+        return True
 
     def close(self):
-        self.closed = True
-        deadline = time.monotonic() + 5
-        for thread in self._threads:
-            thread.join(timeout=max(0, deadline - time.monotonic()))
-        if any(thread.is_alive() for thread in self._threads):
-            raise RuntimeError('task shutdown deadline exceeded')
-        self._credentials.clear()
+        self.service.close()

@@ -1,55 +1,48 @@
-"""
-报告查询路由
-
-API:
-- GET  /api/reports          — 报告列表
-- GET  /api/reports/{filename} — 获取报告内容
-"""
-
-from __future__ import annotations
-import json
+"""Report aliases backed by stored task metadata, plus safe legacy file reads."""
 from pathlib import Path
+from uuid import UUID
+
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse
 
 from core_engine.report_engine.report_generator import ReportGenerator
+from backend.routers.task_router import service_call
 
 router = APIRouter()
 
 
-@router.get("")
-async def list_reports(request: Request):
-    """列出所有报告"""
-    app_config = request.app.state.app_config
-    gen = ReportGenerator(output_dir=app_config.test.report_dir)
-    reports = gen.list_reports()
-    return {"success": True, "reports": reports, "total": len(reports)}
+@router.get('')
+def list_reports(request: Request):
+    service = request.app.state.task_service
+    reports = []
+    for row in service.repo.list_reports():
+        size = None
+        try:
+            size = service.report_path(row['task_id'], row['format']).stat().st_size
+        except (KeyError, OSError, ValueError):
+            pass  # Keep missing/corrupt metadata visible; downloads still reject it.
+        reports.append({'filename': f"{row['task_id']}.{row['format']}", 'format': row['format'],
+                        'task_id': row['task_id'], 'created_at': row['created_at'], 'size': size,
+                        'available': size is not None, 'path': f"reports/{row['task_id']}.{row['format']}"})
+    # Preserve flat reports from releases before durable tasks were introduced.
+    reports.extend(ReportGenerator(service.report_root).list_reports())
+    return {'success': True, 'reports': reports, 'total': len(reports)}
 
 
-@router.get("/{filename}")
-async def get_report(filename: str, request: Request):
-    """获取报告内容"""
-    app_config = request.app.state.app_config
-    report_dir = Path(app_config.test.report_dir)
-    filepath = report_dir / filename
-
-    # 安全检查：防止路径遍历
+@router.get('/{filename}')
+def get_report(filename: str, request: Request):
+    service = request.app.state.task_service
+    task_id, _, format = filename.rpartition('.')
+    if format not in {'json', 'html'} or Path(filename).name != filename or '\\' in filename or ':' in filename:
+        raise HTTPException(422, detail='Invalid report name')
     try:
-        filepath = filepath.resolve()
-        report_dir = report_dir.resolve()
-        if not str(filepath).startswith(str(report_dir)):
-            raise HTTPException(status_code=400, detail="非法路径")
-    except Exception:
-        raise HTTPException(status_code=400, detail="非法路径")
-
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail=f"报告不存在: {filename}")
-
-    content = filepath.read_text(encoding="utf-8")
-
-    if filename.endswith(".json"):
-        return JSONResponse(content=json.loads(content))
-    elif filename.endswith(".html"):
-        return HTMLResponse(content=content)
+        UUID(task_id)
+    except ValueError:
+        path = (service.report_root / filename).resolve()
+        if not path.is_relative_to(service.report_root):
+            raise HTTPException(422, detail='Invalid report path')
+        if not path.is_file():
+            raise HTTPException(404, detail='Report not found')
     else:
-        return {"success": True, "content": content}
+        path = service_call(lambda: service.report_path(task_id, format))
+    return FileResponse(path, media_type='application/json' if format == 'json' else 'text/html')

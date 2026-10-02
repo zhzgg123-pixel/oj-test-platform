@@ -1,5 +1,7 @@
 """Single-consumer task service executing only durable input snapshots."""
 from collections import deque
+from dataclasses import asdict
+from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
 import subprocess
@@ -77,7 +79,7 @@ class TaskService:
                 self._lease.close()
                 raise
 
-    def create(self, config, credentials=None):
+    def create(self, config, credentials=None, name=''):
         config = TaskConfig.model_validate(config.to_dict() if isinstance(config, TaskConfig) else config)
         if config.mode != 'sequential':
             raise ValueError('concurrent mode is not enabled until S06')
@@ -93,7 +95,7 @@ class TaskService:
                 raise RuntimeError('task service is not accepting tasks')
             if len(self._pending) >= 20:
                 raise QueueFullError('task waiting queue is full (20)')
-            task_id = self.repo.insert_task(config, profile, cases, self.platform_sha, self.sut_sha)
+            task_id = self.repo.insert_task(config, profile, cases, self.platform_sha, self.sut_sha, name=name)
             self._credentials[task_id] = credentials.model_copy(deep=True)
             self._events[task_id] = threading.Event()
             self._pending.append(task_id)
@@ -272,3 +274,48 @@ class TaskService:
             self._events.clear()
             self._lease.close()
             self.closed = True
+
+    def report_path(self, task_id, format):
+        report = self.repo.get_report(task_id, format)
+        path = (self.report_root / report['relative_path']).resolve()
+        if not path.is_relative_to(self.report_root):
+            raise ValueError('report path escapes report root')
+        if not path.is_file():
+            raise FileNotFoundError('report file is missing')
+        if hashlib.sha256(path.read_bytes()).hexdigest() != report['sha256']:
+            raise ValueError('report integrity check failed')
+        return path
+
+    def serialize_task(self, task_id):
+        task = self.get(task_id)
+        value = asdict(task)
+        result = self.task_result(task_id)
+        done = task.counts['total'] - task.counts['pending'] - task.counts['running']
+        value.update(status=task.state, progress=int(100 * done / task.counts['total']) if task.counts['total'] else 0,
+                     progress_desc=task.state, updated_at=task.finished_at or task.started_at or task.created_at,
+                     error_message=task.error['reason'] if task.error else '', success=self.success(task_id))
+        for field in ('created_at', 'started_at', 'finished_at', 'updated_at'):
+            if value.get(field) is not None:
+                value[field] = datetime.fromtimestamp(value[field], timezone.utc).isoformat()
+        reports = self.repo.list_reports(task_id)
+        value['result'] = {**task.counts, 'pass_rate': result.pass_rate, 'duration': result.duration,
+                           'report_paths': {r['format']: f"reports/{task_id}.{r['format']}" for r in reports},
+                           'details': [{'case_id': cr.case.id, 'description': cr.case.desc,
+                                        'expected': cr.case.expected_status, 'actual': cr.actual_status,
+                                        'status': cr.status, 'passed': cr.passed, 'elapsed': cr.duration}
+                                       for cr in result.case_results]}
+        return value
+
+    def delete(self, task_id):
+        with self._condition:
+            if self.get(task_id).state in ACTIVE or self._active == task_id:
+                raise TaskConflictError('cannot delete active task')
+            paths = []
+            for report in self.repo.list_reports(task_id):
+                path = (self.report_root / report['relative_path']).resolve()
+                if not path.is_relative_to(self.report_root):
+                    raise ValueError('report path escapes report root')
+                paths.append(path)
+            for path in paths:
+                path.unlink(missing_ok=True)
+            self.repo.delete_task(task_id)

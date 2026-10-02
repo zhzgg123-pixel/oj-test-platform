@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def config_path(tmp_path, mock_oj):
     path = tmp_path / 'app.yaml'
     path.write_text(json.dumps({'oj': {'base_url': mock_oj.base_url, 'timeout': 2},
-        'test': {'report_dir': str(tmp_path / 'reports'), 'case_strategies': ['random'], 'generate_case_count': 1}}),
+        'test': {'db_path': str(tmp_path / 'history.db'), 'report_dir': str(tmp_path / 'reports'), 'case_strategies': ['random'], 'generate_case_count': 1}}),
         encoding='utf-8')
     return path
 
@@ -83,7 +83,9 @@ def test_cli_uses_file_defaults_and_omits_password_from_output(tmp_path, mock_oj
     assert data['result']['total'] == 1
     assert data['result']['passed'] == 1
     assert 'password' not in data['config']
-    for path in (tmp_path / 'reports').glob('*'):
+    for path in (tmp_path / 'reports').rglob('*'):
+        if not path.is_file():
+            continue
         assert 'test-only' not in path.read_text(encoding='utf-8')
 
 

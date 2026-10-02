@@ -22,6 +22,8 @@ class TaskStatus(str, Enum):
     RUNNING = "RUNNING"        # 执行中
     COMPLETED = "COMPLETED"    # 已完成
     FAILED = "FAILED"          # 失败
+    CANCEL_REQUESTED = "CANCEL_REQUESTED"
+    INTERRUPTED = "INTERRUPTED"
     CANCELLED = "CANCELLED"    # 已取消
 
     def __str__(self) -> str:

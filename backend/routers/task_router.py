@@ -1,7 +1,11 @@
 """Task routes: merge application defaults, then validate before scheduling."""
 from copy import deepcopy
+from dataclasses import asdict
+from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Query
+from fastapi.responses import FileResponse
+from task_center.service import QueueFullError, TaskConflictError
 from pydantic import Field, SecretStr, ValidationError, create_model
 
 from config_center.models import TaskConfig, ExecutionCredentials, ValidatedModel
@@ -51,7 +55,7 @@ def validated_config(req, request):
 
 
 @router.post('/generate')
-async def generate_cases(req: GenerateCasesRequest, request: Request):
+def generate_cases(req: GenerateCasesRequest, request: Request):
     config = validated_config(req, request)
     try:
         cases = CaseBuilder().build(config, ProfileLoader().load(config.profile_id))
@@ -65,53 +69,61 @@ async def generate_cases(req: GenerateCasesRequest, request: Request):
          'source_code': c.source_code, 'source_sha256': c.source_sha256} for c in cases]}
 
 
+def service_call(operation):
+    try:
+        return operation()
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404, detail='Task or report not found') from None
+    except TaskConflictError as exc:
+        raise HTTPException(409, detail=str(exc)) from None
+    except QueueFullError as exc:
+        raise HTTPException(429, detail=str(exc)) from None
+    except ValueError:
+        raise HTTPException(422, detail='Invalid task or report data') from None
+
+
 @router.post('', status_code=202)
-async def create_task(req: CreateTaskRequest, request: Request):
+def create_task(req: CreateTaskRequest, request: Request):
     config = validated_config(req, request)
     credentials = ExecutionCredentials(username=req.username, password=req.password)
-    manager = request.app.state.task_manager
-    task = manager.create_task(config=config, credentials=credentials, name=req.name)
-    manager.start_task(task.id)
-    return {'task_id': task.id, 'status': task.status.value}
+    service = request.app.state.task_service
+    task_id = service_call(lambda: service.create(config, credentials, name=req.name))
+    return {'task_id': task_id, 'status': service.get(task_id).state}
 
 
-@router.get("")
-async def list_tasks(request: Request):
-    """获取任务列表"""
-    task_manager = request.app.state.task_manager
-    tasks = task_manager.list_tasks()
-    return {
-        "success": True,
-        "tasks": [t.to_dict() for t in tasks],
-        "total": len(tasks),
-    }
+@router.get('')
+def list_tasks(request: Request, limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+    service = request.app.state.task_service
+    tasks = service.repo.list_tasks(limit, offset)
+    return {'success': True, 'tasks': [service.serialize_task(task.id) for task in tasks],
+            'total': service.repo.count_tasks(), 'limit': limit, 'offset': offset}
 
 
-@router.get("/{task_id}")
-async def get_task(task_id: str, request: Request):
-    """获取任务详情"""
-    task_manager = request.app.state.task_manager
-    task = task_manager.get_task(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
-    return {"success": True, "task": task.to_dict()}
+@router.get('/{task_id}')
+def get_task(task_id: str, request: Request):
+    service = request.app.state.task_service
+    return {'success': True, 'task': service_call(lambda: service.serialize_task(task_id))}
 
 
-@router.post("/{task_id}/cancel")
-async def cancel_task(task_id: str, request: Request):
-    """取消任务"""
-    task_manager = request.app.state.task_manager
-    ok = task_manager.cancel_task(task_id)
-    if not ok:
-        raise HTTPException(status_code=400, detail="无法取消任务（已完成/不存在）")
-    return {"success": True, "message": "任务已取消"}
+@router.get('/{task_id}/cases')
+def get_cases(task_id: str, request: Request):
+    cases = service_call(lambda: request.app.state.task_service.repo.list_cases(task_id))
+    return {'success': True, 'cases': [asdict(case) for case in cases], 'total': len(cases)}
 
 
-@router.delete("/{task_id}")
-async def delete_task(task_id: str, request: Request):
-    """删除任务"""
-    task_manager = request.app.state.task_manager
-    ok = task_manager.delete_task(task_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
-    return {"success": True, "message": "任务已删除"}
+@router.get('/{task_id}/reports/{format}')
+def get_report(task_id: str, format: Literal['json', 'html'], request: Request):
+    path = service_call(lambda: request.app.state.task_service.report_path(task_id, format))
+    return FileResponse(path, media_type='application/json' if format == 'json' else 'text/html')
+
+
+@router.post('/{task_id}/cancel')
+def cancel_task(task_id: str, request: Request):
+    service_call(lambda: request.app.state.task_service.cancel(task_id))
+    return {'success': True, 'message': 'Cancellation accepted'}
+
+
+@router.delete('/{task_id}')
+def delete_task(task_id: str, request: Request):
+    service_call(lambda: request.app.state.task_service.delete(task_id))
+    return {'success': True, 'message': 'Task deleted'}

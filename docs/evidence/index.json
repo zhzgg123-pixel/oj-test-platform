@@ -213,6 +213,27 @@
       "scope": "13 HTTP Mock lifecycle tests: persist-before-network, immutable queued input, per-case result writes, memory-only credentials cleanup, login/report/persistence failure semantics, one consumer with queue20, sequential cancellation and shutdown lock retention. Public Web/CLI still use the old manager until next entrypoint commit; concurrent execution and full safe reports remain S06/S07.",
       "artifacts": [
         "artifacts/s05b-service.xml"
+      ],
+      "commit": "ed3d10b22ffa4603fffbc09e68500956c4636871",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S05b-entrypoints",
+      "commit_locator": "feat: persist Web and CLI task history across restarts",
+      "environment": "Windows Python 3.12.10",
+      "red": "6 new public-entrypoint tests failed before db_path/v1/history/name wiring; supplemental compatibility tests caught missing report size and numeric timestamps breaking existing frontend",
+      "command": "python -m pytest -q --junitxml=artifacts/s05b-entrypoints.xml",
+      "exit_code": 0,
+      "passed": 214,
+      "failed": 0,
+      "warnings": [
+        "Starlette TestClient deprecates httpx in favor of httpx2; execution still succeeds"
+      ],
+      "scope": "Web/API restart and CLI child-process history, saved inputs and reports, name-preserving schema upgrade, --db/OJ_DB precedence, lock conflicts before requests, 404/409/422/429 contracts, report path containment, legacy routes and fields. Full HTML evidence hardening, concurrent execution and real OJ remain later stages.",
+      "review": "Independent read-only review found timestamp string and report size regressions; both fixed, reviewer reran 2 targeted tests and confirmed no remaining S05 blockers.",
+      "artifacts": [
+        "artifacts/s05b-entrypoints.xml"
       ]
     }
   ]

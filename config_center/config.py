@@ -27,7 +27,8 @@ class JudgeConfig(ValidatedModel):
 
 class TestConfig(ValidatedModel):
     log_level: str = 'INFO'
-    report_dir: str = 'reports'
+    report_dir: str = Field(default='reports', min_length=1)
+    db_path: str = Field(default='runtime/tasks.db', min_length=1)
     case_strategies: list[str] = Field(default_factory=lambda: ['random', 'boundary', 'rule'])
     generate_case_count: int = Field(default=5, ge=1, le=1000)
 
@@ -58,7 +59,7 @@ class AppConfig(ValidatedModel):
         return TaskConfig.model_validate(data)
 
     @classmethod
-    def load(cls, env=None, config_path=None, environ=None, task_overrides=None):
+    def load(cls, env=None, config_path=None, environ=None, task_overrides=None, runtime_overrides=None):
         environment = dict(os.environ if environ is None else environ)
         selected_env = env or environment.get('OJ_ENV', 'dev')
         if not selected_env or not all(c.isalnum() or c in '_-' for c in selected_env):
@@ -78,6 +79,7 @@ class AppConfig(ValidatedModel):
             'OJ_TIMEOUT': [('oj', 'timeout'), ('task', 'request_timeout')],
             'OJ_LOG_LEVEL': [('test', 'log_level')],
             'OJ_REPORT_DIR': [('test', 'report_dir')],
+            'OJ_DB': [('test', 'db_path')],
             'OJ_ENV': [('env',)],
             'OJ_CASE_COUNT': [('task', 'case_count')],
             'OJ_SEED': [('task', 'seed')],
@@ -111,6 +113,8 @@ class AppConfig(ValidatedModel):
             if task_overrides.get('request_timeout') is not None:
                 task.pop('timeout', None)
             task.update({k: v for k, v in task_overrides.items() if v is not None})
+        if runtime_overrides:
+            raw.setdefault('test', {}).update({k: str(v) for k, v in runtime_overrides.items() if v is not None})
         return cls.model_validate(raw)
 
     @staticmethod

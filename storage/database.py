@@ -31,19 +31,20 @@ class Database:
         db = sqlite3.connect(self.path, timeout=5, isolation_level=None)
         try:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version not in (0, 1):
+            if version not in (0, 1, 2):
                 raise ValueError(f'unsupported database version: {version}')
             db.execute('PRAGMA journal_mode=WAL')
         finally:
             db.close()
         with self.connection(write=True) as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
-            if version == 0:
-                sql = (Path(__file__).parent / 'migrations/001_initial.sql').read_text(encoding='utf-8-sig')
-                # Execute each fixed migration statement without executescript's implicit COMMIT.
+            if version not in (0, 1, 2):
+                raise ValueError(f'unsupported database version: {version}')
+            migrations = ('001_initial.sql', '002_task_name.sql')
+            for next_version in range(version + 1, len(migrations) + 1):
+                sql = (Path(__file__).parent / 'migrations' / migrations[next_version - 1]).read_text(encoding='utf-8-sig')
+                # Fixed migrations contain no procedural SQL; avoid executescript's implicit COMMIT.
                 for statement in sql.split(';'):
                     if statement.strip():
                         db.execute(statement)
-                db.execute('PRAGMA user_version=1')
-            elif version != 1:
-                raise ValueError(f'unsupported database version: {version}')
+                db.execute(f'PRAGMA user_version={next_version}')

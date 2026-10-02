@@ -54,6 +54,7 @@ class TaskRecord:
     finished_at: float | None
     error: dict | None
     counts: dict
+    name: str = ''
 
 
 @dataclass(frozen=True)
@@ -82,7 +83,9 @@ class TaskRepository:
     def initialize(self):
         self.database.initialize()
 
-    def insert_task(self, config, profile, cases, platform_sha, sut_sha):
+    def insert_task(self, config, profile, cases, platform_sha, sut_sha, name=''):
+        if not isinstance(name, str) or len(name) > 200:
+            raise ValueError('invalid task name')
         if not isinstance(config, TaskConfig):
             raise TypeError('validated TaskConfig required')
         if len(cases) != config.case_count:
@@ -99,8 +102,8 @@ class TaskRepository:
             snapshots.append((str(uuid4()), ordinal, case, encode(case_input(case)), encode(asdict(expected))))
         task_id = str(uuid4())
         with self.database.connection(write=True) as db:
-            db.execute('INSERT INTO tasks(id,state,config_json,profile_json,profile_sha256,platform_sha,sut_sha,created_at) VALUES (?,?,?,?,?,?,?,?)',
-                       (task_id, 'PENDING', encode(config.to_dict()), encode(profile.to_dict()), profile.profile_sha256, platform_sha, sut_sha, time.time()))
+            db.execute('INSERT INTO tasks(id,state,config_json,profile_json,profile_sha256,platform_sha,sut_sha,created_at,name) VALUES (?,?,?,?,?,?,?,?,?)',
+                       (task_id, 'PENDING', encode(config.to_dict()), encode(profile.to_dict()), profile.profile_sha256, platform_sha, sut_sha, time.time(), name))
             for case_id, ordinal, case, actual, expected in snapshots:
                 db.execute('INSERT INTO task_cases VALUES (?,?,?,?,?,?,?,?,?)',
                            (case_id, task_id, case.id, ordinal, case.strategy, actual, expected, case.source_sha256, 'PENDING'))
@@ -120,7 +123,7 @@ class TaskRepository:
         counts['total'] = sum(counts.values())
         return TaskRecord(row['id'], row['state'], json.loads(row['config_json']), json.loads(row['profile_json']),
                           row['profile_sha256'], row['platform_sha'], row['sut_sha'], row['created_at'],
-                          row['started_at'], row['finished_at'], json.loads(row['error_json']) if row['error_json'] else None, counts)
+                          row['started_at'], row['finished_at'], json.loads(row['error_json']) if row['error_json'] else None, counts, row['name'])
 
     def get_task(self, task_id):
         with self.database.connection() as db:
@@ -258,3 +261,16 @@ class TaskRepository:
             updated = db.execute("UPDATE task_cases SET state='RUNNING' WHERE task_id=? AND logical_id=? AND state='PENDING'", (task_id, logical_id))
             if updated.rowcount != 1:
                 raise ValueError('case is not pending')
+
+    def count_tasks(self):
+        with self.database.connection() as db:
+            return db.execute('SELECT count(*) FROM tasks').fetchone()[0]
+
+    def list_reports(self, task_id=None):
+        with self.database.connection() as db:
+            if task_id is not None:
+                self._required(db, task_id)
+                rows = db.execute('SELECT * FROM reports WHERE task_id=? ORDER BY created_at DESC', (task_id,)).fetchall()
+            else:
+                rows = db.execute('SELECT * FROM reports ORDER BY created_at DESC').fetchall()
+            return [dict(row) for row in rows]

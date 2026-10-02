@@ -36,6 +36,7 @@ async def get_config(request: Request):
             "test": {
                 "log_level": app_config.test.log_level,
                 "report_dir": app_config.test.report_dir,
+                "db_path": app_config.test.db_path,
                 "case_strategies": app_config.test.case_strategies,
                 "generate_case_count": app_config.test.generate_case_count,
             },
@@ -47,11 +48,14 @@ async def get_config(request: Request):
 async def reload_config(request: Request):
     """重新加载配置"""
     try:
-        refreshed = AppConfig.load(config_path=request.app.state.config_path)
+        refreshed = AppConfig.load(config_path=request.app.state.config_path,
+                                   task_overrides=request.app.state.task_overrides,
+                                   runtime_overrides=request.app.state.runtime_overrides)
     except (ValueError, OSError):
         raise HTTPException(422, detail="Invalid configuration; active configuration retained") from None
     # Existing task manager/report resources keep their startup destination until restart.
-    if refreshed.test.report_dir != request.app.state.app_config.test.report_dir:
-        raise HTTPException(409, detail="Changing report_dir requires application restart")
+    if (refreshed.test.report_dir != request.app.state.app_config.test.report_dir
+            or refreshed.test.db_path != request.app.state.app_config.test.db_path):
+        raise HTTPException(409, detail="Changing report_dir or db_path requires application restart")
     request.app.state.app_config = refreshed
     return {"status": "ok", "message": "配置已重新加载"}
