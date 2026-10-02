@@ -416,7 +416,85 @@
       ],
       "task_ids": [
         "d9fbbb75-5027-418a-b888-790ffee0f462"
-      ]
+      ],
+      "commit": "aa334c3f713091743c196f55668964fe5cb1b318",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main"
+    },
+    {
+      "stage": "S09",
+      "status": "PASS (Windows/Linux/HTTP Mock)",
+      "commit": "59ee6840954f000bdea629b9b683843d2f2329fa",
+      "remote_sha_verified": true,
+      "remote_ref": "origin/main",
+      "environment": "Windows Python 3.12.10; Docker Desktop Linux amd64 Python 3.12.15; Engine 29.6.2; Compose 5.3.1",
+      "tests": {
+        "windows": 271,
+        "linux": 271,
+        "warnings_each": 1
+      },
+      "commands": [
+        "python -m pytest -q --junitxml=artifacts/s09-windows.xml",
+        "non-root Linux image + read-only tests/scripts/dev-lock/pytest.ini mounts; pip --target /tmp/testdeps; PYTHONPATH=/tmp/testdeps:/app python -m pytest -q -o cache_dir=/tmp/pytest-cache --junitxml=/evidence/s09-linux.xml",
+        "docker compose --profile demo build",
+        "docker compose --profile demo up -d --wait platform mock-oj",
+        "docker compose --profile demo run --rm smoke --phase create --evidence /evidence/s09-release.json",
+        "docker compose restart platform",
+        "docker compose --profile demo run --rm smoke --phase verify --evidence /evidence/s09-release.json",
+        "docker compose --profile demo down; up -d --wait platform mock-oj; run --rm smoke --phase verify --evidence /evidence/s09-release.json"
+      ],
+      "acceptance_exit_codes": {
+        "build": 0,
+        "create": 0,
+        "restart_verify": 0,
+        "recreate_verify": 0,
+        "unknown_version_expected_failure": 1,
+        "pip_check": 0
+      },
+      "image_ids": {
+        "platform": "sha256:8346a70a97cfcacaf9f26e8d7ec33d3fd2c74818f8ae8c57f3aa735f8a5b2840",
+        "mock": "sha256:250708f17b9ede5fba3e510e568db1744478e37524e58d7eb3f455dcb144d3d4",
+        "smoke": "sha256:b34c6cb70022e8caf3b78a60832687c7429a78b3589b8231dac95a90d6991542"
+      },
+      "container_user": "10001:10001",
+      "health": {
+        "platform": "healthy",
+        "mock-oj": "healthy"
+      },
+      "smoke": {
+        "phase": "create",
+        "status": "PASS",
+        "schema_version": 1,
+        "scope": "HTTP Mock only",
+        "task_id": "1400b328-179f-43e9-8297-2c4ced666384",
+        "platform_sha": "59ee6840954f000bdea629b9b683843d2f2329fa",
+        "counts": {
+          "pending": 0,
+          "running": 0,
+          "passed": 6,
+          "failed": 0,
+          "error": 0,
+          "cancelled": 0,
+          "total": 6
+        },
+        "report_sha256": {
+          "json": "466157b4f6d86d59cb2c38aea823d063903e841d9251613c039a74775bb16790",
+          "html": "79ece445a29e6d5ba777cbd5fcf46cce081b0fb4d9d22784571c71947e5b4c64"
+        }
+      },
+      "review": "Independent review found false-positive expected/actual matching and unknown-version acceptance; negative red/green tests and rereview passed. Linux inherited deployment DB settings caused four failures; non-e2e environment isolation fixed and both full suites rerun.",
+      "artifacts": [
+        "artifacts/s09-windows.xml",
+        "artifacts/s09-linux.xml",
+        "artifacts/s09-build.txt",
+        "artifacts/s09-create.json",
+        "artifacts/s09-restart.json",
+        "artifacts/s09-recreate.json",
+        "artifacts/s09-unknown-rejected.txt",
+        "artifacts/s09-containers.json",
+        "artifacts/s09-images.txt"
+      ],
+      "limits": "Mock does not execute C++; real OJ and GitHub Actions remain unverified. Development unknown-version smoke is not release evidence."
     }
   ]
 }

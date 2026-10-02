@@ -22,19 +22,19 @@
 
 ## 当前起点（2026-10-02 最新本地核对）
 
-本地分支 `main`，HEAD `aa334c3f713091743c196f55668964fe5cb1b318`；本次整理前工作区干净。origin 指向 `https://gitee.com/chasing-dreams-zhuo/oj-test-platform.git`。本轮未查询远端 SHA，也未重跑历史测试。
+本地分支 `main`，HEAD `59ee6840954f000bdea629b9b683843d2f2329fa`；本次整理前工作区干净。origin 指向 `https://gitee.com/chasing-dreams-zhuo/oj-test-platform.git`。S09 已核对远端 SHA，并运行 Windows/Linux 各 271 条回归；具体记录见进度表。
 
 | 阶段 | 当前证据边界 | 后续处理 |
 |---|---|---|
 | S00–S04 | 基线、Mock、严格断言、配置、两道 YAML 题目已有验收记录 | 保留既有回归，不重复实现 |
 | S05–S07 | SQLite、并发取消、报告已有 Windows/Mock 验收记录 | 在 S09/S10 验证 Linux 与真实 OJ 行为 |
 | S08 | Web 流程已有浏览器验收记录；最近记录为 256 条测试通过、1 条警告 | 本轮未重新执行，不宣称新增测试结果 |
-| S09 | NOT_RUN | 下一步：容器构建、HTTP smoke、重启及重建后持久化 |
+| S09 | PASS (Windows/Linux/HTTP Mock) | 正式提交镜像、非root、重启及容器重建持久化通过 |
 | S10 | NOT_RUN | 固定 C++ 版本，专用 MySQL，真实判题矩阵 |
 | S11 | NOT_RUN | 本地门禁及工作流；实际 GitHub 运行还需要仓库 URL |
 | S12 | NOT_RUN | 干净检出验收、文档、简历能力证据映射 |
 
-下方任务 1–3 保留为已实施阶段的设计记录，不再作为待做清单；具体结果以 `docs/progress.md` 为准。接下来从任务 4（S09）开始，详细文件、接口、测试和提交命令以 `docs/implementation-plan.md` 对应阶段为准。
+下方任务 1–4 保留为已实施阶段的设计记录，不再作为待做清单；具体结果以 `docs/progress.md` 为准。接下来从任务 5（S10）开始，详细文件、接口、测试和提交命令以 `docs/implementation-plan.md` 对应阶段为准。
 
 ## 任务 1：完成 S06b 取消与最终报告一致性
 
